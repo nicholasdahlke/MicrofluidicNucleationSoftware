@@ -4,9 +4,6 @@
 
 #ifndef MICROFLUIDICNUCLEATIONSOFTWARE_DETECTION_H
 #define MICROFLUIDICNUCLEATIONSOFTWARE_DETECTION_H
-
-#endif //MICROFLUIDICNUCLEATIONSOFTWARE_DETECTION_H
-
 #include <opencv2/core/types.hpp>
 #include <string>
 
@@ -26,3 +23,5 @@ namespace mfn
         std::string getDetectionType();
     };
 }
+#endif //MICROFLUIDICNUCLEATIONSOFTWARE_DETECTION_H
+
