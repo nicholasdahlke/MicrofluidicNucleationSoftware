@@ -3,10 +3,13 @@
 //
 #include <MicrofluidicNucleation/VideoAnalyzer.h>
 #include <spdlog/spdlog.h>
+#include <filesystem>
 
-mfn::VideoAnalyzer::VideoAnalyzer(const mfn::Experiment &experiment)
+mfn::VideoAnalyzer::VideoAnalyzer(const mfn::Experiment &experiment, const AnalysisConfig &config)
 {
     VideoAnalyzer::experiment = experiment;
+    VideoAnalyzer::config = config;
+    yolo.open(config);
 }
 
 
@@ -28,3 +31,20 @@ void mfn::VideoAnalyzer::openCapture()
                                     video_capture.get(cv::CAP_PROP_FRAME_COUNT));
 }
 
+void mfn::VideoAnalyzer::processLoop()
+{
+    spdlog::get("mfn_logger")->info("Starting process loop");
+
+    if (config.frame_start > 0)
+        video_capture.set(cv::CAP_PROP_POS_FRAMES, config.frame_start - 1);
+
+    int frame_id = config.frame_start;
+    while (frame_id < config.frame_stop || config.frame_stop <= 0)
+    {
+        for (int i = 0; i < config.parallel; ++i)
+        {
+
+        }
+    }
+
+}

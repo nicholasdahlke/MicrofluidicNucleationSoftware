@@ -15,7 +15,6 @@ namespace mfn
         bool show_displacement_vectors = false;
         int right_border_displacement = 1e6;
         float max_movement_threshold_displacement = 1e4;
-        int skip_frames_volume = 0;
         int left_border_volume = 5;
         int right_border_volume = 1e4;
         int x_threshold_count = 20;
@@ -26,6 +25,10 @@ namespace mfn
         float speed_border_left = 50;
         float speed_border_right = 50;
         std::filesystem::path net_file;
+        int skip_frames_volume = 0;
+        int frame_start = 0;
+        int frame_stop = 0;
+        int parallel = 1;
     };
 }
 #endif //MICROFLUIDICNUCLEATIONSOFTWARE_ANALYSISCONFIG_H

@@ -8,6 +8,7 @@ set(HEADER_LIST
         "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/Experiment.h"
         "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/AnalysisConfig.h"
         "${PROJECT_SOURCE_DIR}/include/spdlog/spdlog.h"
+        "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/YoloV5.h"
 
 )
 
@@ -19,6 +20,7 @@ set(SOURCE_LIST
         Frame.cpp
         VideoAnalyzer.cpp
         Experiment.cpp
+        YoloV5.cpp
 )
 add_library(microfluidic_nucleation ${SOURCE_LIST} ${HEADER_LIST})
 

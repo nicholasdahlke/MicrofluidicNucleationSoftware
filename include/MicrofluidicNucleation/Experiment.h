@@ -22,8 +22,8 @@ namespace mfn
 
     private:
         std::filesystem::path video;
-        double frame_rate;
-        double calibration;
+        double frame_rate = 0;
+        double calibration = 0;
     };
 
 
