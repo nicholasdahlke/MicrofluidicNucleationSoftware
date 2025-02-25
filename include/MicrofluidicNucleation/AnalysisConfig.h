@@ -4,6 +4,7 @@
 
 #ifndef MICROFLUIDICNUCLEATIONSOFTWARE_ANALYSISCONFIG_H
 #define MICROFLUIDICNUCLEATIONSOFTWARE_ANALYSISCONFIG_H
+#include <filesystem>
 namespace mfn
 {
     class AnalysisConfig
@@ -24,6 +25,7 @@ namespace mfn
         float confidence_threshold = 0.45;
         float speed_border_left = 50;
         float speed_border_right = 50;
+        std::filesystem::path net_file;
     };
 }
 #endif //MICROFLUIDICNUCLEATIONSOFTWARE_ANALYSISCONFIG_H

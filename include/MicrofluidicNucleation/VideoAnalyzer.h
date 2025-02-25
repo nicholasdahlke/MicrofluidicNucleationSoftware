@@ -5,6 +5,8 @@
 #ifndef MICROFLUIDICNUCLEATIONSOFTWARE_VIDEOANALYZER_H
 #define MICROFLUIDICNUCLEATIONSOFTWARE_VIDEOANALYZER_H
 #include <MicrofluidicNucleation/Experiment.h>
+#include <opencv2/videoio.hpp>
+#include <opencv2/core.hpp>
 
 namespace mfn
 {
@@ -13,8 +15,14 @@ namespace mfn
     public:
         explicit VideoAnalyzer(const Experiment &experiment);
 
-    public:
+    private:
         mfn::Experiment experiment;
+        cv::VideoCapture video_capture;
+        double video_height;
+        double video_width;
+
+
+        void openCapture();
     };
 
 }

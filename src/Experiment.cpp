@@ -3,12 +3,22 @@
 //
 
 #include <MicrofluidicNucleation/Experiment.h>
+#include <spdlog/spdlog.h>
 
 mfn::Experiment::Experiment(const std::filesystem::path &video, double frameRate, double calibration)
 {
-    Experiment::video = video;
-    Experiment::frame_rate = frameRate;
-    Experiment::calibration = calibration;
+    if (!std::filesystem::exists(video))
+        spdlog::get("mfn_logger")->error("The provided video file {} does not exist.", video.string());
+    else
+        Experiment::video = video;
+
+    if (frameRate <= 0 || calibration <= 0)
+        spdlog::get("mfn_logger")->error("Calibration and framerate must be greater than zero.");
+    else
+    {
+        Experiment::frame_rate = frameRate;
+        Experiment::calibration = calibration;
+    }
 }
 
 const std::filesystem::path &mfn::Experiment::getVideo() const

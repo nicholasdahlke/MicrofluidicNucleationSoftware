@@ -1,6 +1,5 @@
 set(HEADER_LIST
         "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/Vector2D.h"
-        "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/MicrofluidicNucleation.h"
         "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/Detection.h"
         "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/RawDroplet.h"
         "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/Droplet.h"
@@ -21,7 +20,7 @@ set(SOURCE_LIST
         VideoAnalyzer.cpp
         Experiment.cpp
 )
-add_library(microfluidic_nucleation MicrofluidicNucleation.cpp ${SOURCE_LIST} ${HEADER_LIST})
+add_library(microfluidic_nucleation ${SOURCE_LIST} ${HEADER_LIST})
 
 target_include_directories(microfluidic_nucleation PUBLIC ../include)
 
