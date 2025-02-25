@@ -18,6 +18,7 @@ namespace mfn
         vector_type content;
 
         explicit Vector2D(vector_type _content);
+        Vector2D() = default;
         double get_length();
 
 

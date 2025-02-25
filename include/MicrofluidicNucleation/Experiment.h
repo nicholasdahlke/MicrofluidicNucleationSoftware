@@ -12,6 +12,7 @@ namespace mfn
     {
     public:
         Experiment(const std::filesystem::path &video, double frameRate, double calibration);
+        Experiment() = default;
 
         const std::filesystem::path &getVideo() const;
 

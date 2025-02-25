@@ -5,6 +5,7 @@
 #ifndef MICROFLUIDICNUCLEATIONSOFTWARE_RAWDROPLET_H
 #define MICROFLUIDICNUCLEATIONSOFTWARE_RAWDROPLET_H
 #include <opencv2/core/types.hpp>
+#include <vector>
 #include <MicrofluidicNucleation/Vector2D.h>
 #include <MicrofluidicNucleation/Detection.h>
 

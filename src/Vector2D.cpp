@@ -3,6 +3,7 @@
 //
 #include <MicrofluidicNucleation/Vector2D.h>
 #include <cmath>
+
 mfn::Vector2D::Vector2D(mfn::Vector2D::vector_type _content)
 {
     content = _content;
