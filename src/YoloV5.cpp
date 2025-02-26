@@ -6,6 +6,7 @@
 #include <spdlog/spdlog.h>
 #include <chrono>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/dnn.hpp>
 
 mfn::YoloV5::YoloV5(const mfn::AnalysisConfig &config)
 {

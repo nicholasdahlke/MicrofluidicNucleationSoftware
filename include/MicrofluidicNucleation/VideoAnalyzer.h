@@ -19,6 +19,7 @@ namespace mfn
     {
     public:
         explicit VideoAnalyzer(const Experiment &experiment, const AnalysisConfig &config);
+        void analyze();
 
     private:
         mfn::Experiment experiment;

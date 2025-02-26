@@ -72,3 +72,10 @@ mfn::Frame mfn::VideoAnalyzer::preprocessFrame(const cv::Mat & input, int frame_
     spdlog::get("mfn_logger")->info("Preprocessed frame {} with {} droplets detected", frame_id, frame.droplets.size());
     return frame;
 }
+
+
+void mfn::VideoAnalyzer::analyze()
+{
+    openCapture();
+    processLoop();
+}
