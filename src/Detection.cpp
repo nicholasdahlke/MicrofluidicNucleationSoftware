@@ -10,17 +10,17 @@ mfn::Detection::Detection(cv::Rect _rect, std::string _detection_type, float _co
     confidence = _confidence;
 }
 
-cv::Rect mfn::Detection::getRect()
+cv::Rect mfn::Detection::getRect() const
 {
     return rect;
 }
 
-float mfn::Detection::getConfidence()
+float mfn::Detection::getConfidence() const
 {
     return confidence;
 }
 
-std::string mfn::Detection::getDetectionType()
+std::string mfn::Detection::getDetectionType() const
 {
     return detection_type;
 }

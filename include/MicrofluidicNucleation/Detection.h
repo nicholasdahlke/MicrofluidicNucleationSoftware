@@ -18,9 +18,10 @@ namespace mfn
 
     public:
         Detection(cv::Rect _rect, std::string _detection_type, float _confidence);
-        cv::Rect getRect();
-        float getConfidence();
-        std::string getDetectionType();
+        Detection() = default;
+        cv::Rect getRect() const;
+        float getConfidence() const ;
+        std::string getDetectionType() const;
     };
 }
 #endif //MICROFLUIDICNUCLEATIONSOFTWARE_DETECTION_H

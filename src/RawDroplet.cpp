@@ -9,16 +9,6 @@ void mfn::RawDroplet::setEllipse(const cv::RotatedRect &ellipse)
     RawDroplet::ellipse = ellipse;
 }
 
-void mfn::RawDroplet::setIsFrozen(bool isFrozen)
-{
-    is_frozen = isFrozen;
-}
-
-void mfn::RawDroplet::setDetection(const mfn::Detection &detection)
-{
-    RawDroplet::detection = detection;
-}
-
 void mfn::RawDroplet::setMovement(const mfn::Vector2D &movement)
 {
     RawDroplet::movement = movement;
@@ -62,4 +52,10 @@ const mfn::Vector2D &mfn::RawDroplet::getMovement() const
 cv::Point mfn::RawDroplet::getMidpoint() const
 {
     return ellipse.center;
+}
+
+mfn::RawDroplet::RawDroplet(const mfn::Detection& detection)
+{
+    RawDroplet::detection = detection;
+    is_frozen = (detection.getDetectionType() == "droplet_frozen");
 }

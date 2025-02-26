@@ -24,13 +24,13 @@ namespace mfn
         mfn::Experiment experiment;
         mfn::AnalysisConfig config;
         cv::VideoCapture video_capture;
-        double video_height;
-        double video_width;
+
         std::vector<mfn::Frame> frames;
         YoloV5 yolo;
 
         void openCapture();
         void processLoop();
+        mfn::Frame preprocessFrame(const cv::Mat & input, int frame_id);
     };
 
 }

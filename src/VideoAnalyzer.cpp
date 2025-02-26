@@ -4,6 +4,8 @@
 #include <MicrofluidicNucleation/VideoAnalyzer.h>
 #include <spdlog/spdlog.h>
 #include <filesystem>
+#include <tuple>
+
 
 mfn::VideoAnalyzer::VideoAnalyzer(const mfn::Experiment &experiment, const AnalysisConfig &config)
 {
@@ -41,10 +43,32 @@ void mfn::VideoAnalyzer::processLoop()
     int frame_id = config.frame_start;
     while (frame_id < config.frame_stop || config.frame_stop <= 0)
     {
-        for (int i = 0; i < config.parallel; ++i)
+        std::vector<std::tuple<cv::Mat, int>> frame_queue;
+        while(frame_queue.size() < config.parallel || frame_id > config.frame_stop)
         {
-
+            cv::Mat temp;
+            video_capture >> temp;
+            if(temp.empty() || frame_id > config.frame_stop)
+            {
+                spdlog::get("mfn_logger")->info("End of video reached");
+                break;
+            }
+            frame_queue.emplace_back(temp, frame_id);
+            frame_id++;
         }
+
+        for (const std::tuple<cv::Mat, int> & frame : frame_queue)
+            frames.push_back(preprocessFrame(std::get<0>(frame), std::get<1>(frame)));
     }
 
+}
+
+mfn::Frame mfn::VideoAnalyzer::preprocessFrame(const cv::Mat & input, int frame_id)
+{
+    Frame frame(frame_id * experiment.getFrameRate());
+    std::vector<mfn::Detection> detections = yolo.process(input);
+    for (const mfn::Detection & detection : detections)
+        frame.droplets.emplace_back(detection);
+    spdlog::get("mfn_logger")->info("Preprocessed frame {} with {} droplets detected", frame_id, frame.droplets.size());
+    return frame;
 }

@@ -17,16 +17,14 @@ namespace mfn
         cv::RotatedRect ellipse;
         bool is_frozen;
         mfn::Detection detection;
-        mfn::Vector2D movement;
-        double distance_to_next;
+        mfn::Vector2D movement{};
+        double distance_to_next{};
         std::vector<cv::Point> contour;
 
     public:
+        explicit RawDroplet(const mfn::Detection& detection);
+
         void setEllipse(const cv::RotatedRect &ellipse);
-
-        void setIsFrozen(bool isFrozen);
-
-        void setDetection(const Detection &detection);
 
         void setMovement(const Vector2D &movement);
 
