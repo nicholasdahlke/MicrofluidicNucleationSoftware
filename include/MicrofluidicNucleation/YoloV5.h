@@ -21,6 +21,7 @@ namespace mfn
 
         void open(const mfn::AnalysisConfig &config);
         std::vector<mfn::Detection> process(const cv::Mat &input);
+        std::vector<std::vector<mfn::Detection>> process(const std::vector<cv::Mat> & inputs);
 
     private:
         cv::dnn::Net yolo;

@@ -59,3 +59,13 @@ mfn::RawDroplet::RawDroplet(const mfn::Detection& detection)
     RawDroplet::detection = detection;
     is_frozen = (detection.getDetectionType() == "droplet_frozen");
 }
+
+const cv::Mat &mfn::RawDroplet::getDropletImage() const
+{
+    return droplet_image;
+}
+
+void mfn::RawDroplet::setDropletImage(const cv::Mat &dropletImage)
+{
+    droplet_image = dropletImage;
+}

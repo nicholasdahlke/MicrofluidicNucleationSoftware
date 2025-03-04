@@ -15,13 +15,17 @@ mfn::YoloV5::YoloV5(const mfn::AnalysisConfig &config)
 
 void mfn::YoloV5::open(const mfn::AnalysisConfig &config)
 {
+    spdlog::get("mfn_logger")->info("Reading net file");
     if(!std::filesystem::exists(config.net_file))
         spdlog::get("mfn_logger")->error("An error occurred opening the neural net file.");
     else
-        yolo = cv::dnn::readNet(config.net_file);
+        yolo = cv::dnn::readNet(config.net_file.string());
 
     net_input_size = cv::Size(640.0, 640.0);
+    spdlog::get("mfn_logger")->info("Reading net file finished");
     YoloV5::config = config;
+    yolo.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
+    yolo.setPreferableTarget(cv::dnn::DNN_TARGET_OPENCL);
 }
 
 std::vector<mfn::Detection> mfn::YoloV5::process(const cv::Mat &input)
@@ -48,6 +52,15 @@ std::vector<mfn::Detection> mfn::YoloV5::process(const cv::Mat &input)
     return getDetectionFromOutput(input, outputs);
 }
 
+std::vector<std::vector<mfn::Detection>> mfn::YoloV5::process(const std::vector<cv::Mat> & inputs)
+{
+    std::vector<std::vector<mfn::Detection>> result;
+    for(const cv::Mat & input : inputs)
+        result.push_back(process(input));
+    return result;
+}
+
+
 std::vector<mfn::Detection> mfn::YoloV5::getDetectionFromOutput(const cv::Mat &input, const std::vector<cv::Mat> &outputs) const
 {
     std::vector<int> class_ids;
@@ -57,8 +70,8 @@ std::vector<mfn::Detection> mfn::YoloV5::getDetectionFromOutput(const cv::Mat &i
     class_names.emplace_back("droplets");
     class_names.emplace_back("droplets_frozen");
 
-    float x_factor = input.cols / net_input_size.width;
-    float y_factor = input.rows / net_input_size.height;
+    float x_factor = static_cast<float>(input.cols) / net_input_size.width;
+    float y_factor = static_cast<float>(input.rows) / net_input_size.height;
     auto data = (float *)outputs[0].data;
     const int rows = 25200;
     const int dimensions = 7; // Always adjust for multi class models
@@ -99,10 +112,8 @@ std::vector<mfn::Detection> mfn::YoloV5::getDetectionFromOutput(const cv::Mat &i
     std::vector<Detection> detections;
     for (int idx : indices)
     {
-        cv::Rect box = boxes[idx];
-        std::string label = cv::format("%.2f", confidences[idx]);
-        detections.emplace_back(box, class_names[class_ids[idx]], confidences[idx]);
-
+        detections.emplace_back(boxes[idx], class_names[class_ids[idx]], confidences[idx]);
     }
     return detections;
 }
+

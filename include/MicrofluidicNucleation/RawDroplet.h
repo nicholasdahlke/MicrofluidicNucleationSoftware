@@ -8,6 +8,7 @@
 #include <vector>
 #include <MicrofluidicNucleation/Vector2D.h>
 #include <MicrofluidicNucleation/Detection.h>
+#include <opencv2/core/mat.hpp>
 
 namespace mfn
 {
@@ -15,6 +16,7 @@ namespace mfn
     {
     private:
         cv::RotatedRect ellipse;
+        cv::Mat droplet_image;
         bool is_frozen;
         mfn::Detection detection;
         mfn::Vector2D movement{};
@@ -43,6 +45,10 @@ namespace mfn
         const Vector2D &getMovement() const;
 
         cv::Point getMidpoint() const;
+
+        const cv::Mat &getDropletImage() const;
+
+        void setDropletImage(const cv::Mat &dropletImage);
 
 
     };

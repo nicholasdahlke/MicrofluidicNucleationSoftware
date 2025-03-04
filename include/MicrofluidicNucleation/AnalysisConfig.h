@@ -21,7 +21,7 @@ namespace mfn
         double calib = 1.0;
         float score_threshold = 0.5;
         float nms_threshold = 0.4;
-        float confidence_threshold = 0.45;
+        float confidence_threshold = 0.7;
         float speed_border_left = 50;
         float speed_border_right = 50;
         std::filesystem::path net_file;
