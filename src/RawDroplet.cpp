@@ -34,6 +34,16 @@ const std::vector<cv::Point> &mfn::RawDroplet::getContour() const
     return contour;
 }
 
+float mfn::RawDroplet::getTemperature() const
+{
+    return temperature_k;
+}
+
+void mfn::RawDroplet::setTemperature(float temperature_k)
+{
+    this->temperature_k = temperature_k;
+}
+
 double mfn::RawDroplet::getDistanceToNext() const
 {
     return distance_to_next;
@@ -68,4 +78,14 @@ const cv::Mat &mfn::RawDroplet::getDropletImage() const
 void mfn::RawDroplet::setDropletImage(const cv::Mat &dropletImage)
 {
     droplet_image = dropletImage;
+}
+
+bool mfn::RawDroplet::getIgnore() const
+{
+    return ignore;
+}
+
+void mfn::RawDroplet::setIgnore(bool ignore)
+{
+    this->ignore = ignore;
 }

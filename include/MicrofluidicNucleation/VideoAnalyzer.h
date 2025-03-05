@@ -22,6 +22,7 @@ namespace mfn
         void analyze();
 
     private:
+        typedef std::tuple<cv::Mat, int> frame_transfer_t;
         mfn::Experiment experiment;
         mfn::AnalysisConfig config;
         cv::VideoCapture video_capture;
@@ -31,7 +32,11 @@ namespace mfn
 
         void openCapture();
         void processLoop();
-        mfn::Frame preprocessFrame(const cv::Mat & input, int frame_id);
+        mfn::Frame detectDroplets(const frame_transfer_t & input);
+
+        static void detectCollision(mfn::Frame & frame);
+        static void detectContour(mfn::Frame & frame);
+        static cv::Rect enlargeRect(cv::Rect _rect, double _factor);
     };
 
 }

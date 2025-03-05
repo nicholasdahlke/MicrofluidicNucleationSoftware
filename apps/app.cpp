@@ -22,7 +22,7 @@ int main()
     mfn::Experiment experiment("C:/Users/Nicholas Dahlke/Documents/Frozen T Cool -33-9 T Warm12-8 Oil 700 Water 10.mp4", 50, 1);
     mfn::AnalysisConfig config;
     config.net_file = "C:/Users/Nicholas Dahlke/Documents/multiphase.onnx";
-    config.frame_stop = 20;
+    config.frame_stop = 100;
 
     mfn::VideoAnalyzer analyzer(experiment, config);
     analyzer.analyze();

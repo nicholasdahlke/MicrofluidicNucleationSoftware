@@ -22,11 +22,17 @@ namespace mfn
         mfn::Vector2D movement{};
         double distance_to_next{};
         std::vector<cv::Point> contour;
+        float temperature_k;
+        bool ignore;
 
     public:
         explicit RawDroplet(const mfn::Detection& detection);
 
         void setEllipse(const cv::RotatedRect &ellipse);
+
+        bool getIgnore() const;
+
+        void setIgnore(bool ignore);
 
         void setMovement(const Vector2D &movement);
 
@@ -37,6 +43,10 @@ namespace mfn
         bool isFrozen() const;
 
         const std::vector<cv::Point> &getContour() const;
+
+        float getTemperature() const;
+
+        void setTemperature(float temperature_k);
 
         double getDistanceToNext() const;
 
@@ -49,7 +59,6 @@ namespace mfn
         const cv::Mat &getDropletImage() const;
 
         void setDropletImage(const cv::Mat &dropletImage);
-
 
     };
 }
