@@ -6,7 +6,7 @@
 #include <filesystem>
 #include <tuple>
 #include <opencv2/imgproc.hpp>
-#include <opencv2/imgcodecs.hpp>
+#include <opencv2/highgui.hpp>
 #include <opencv2/photo.hpp>
 #include <execution>
 #include <chrono>
@@ -78,7 +78,7 @@ void mfn::VideoAnalyzer::processLoop()
         // Detect contours
         spdlog::get("mfn_logger")->info("Detecting contours");
         std::for_each(
-            std::execution::par,
+            std::execution::seq,
             frame_queue.begin(),
             frame_queue.end(),
             detectContour
@@ -97,11 +97,8 @@ mfn::Frame mfn::VideoAnalyzer::detectDroplets(const frame_transfer_t & input)
     for (const mfn::Detection & detection : detections)
     {
         mfn::RawDroplet droplet(detection);
-        // Store the downsampled droplet
-        const float down_factor = 0.5;
         //Enlarge rect to avoid problems with border collisions
-        cv::Mat droplet_image = std::get<0>(input)(enlargeRect(detection.getRect(), 1)).clone();
-        resize(droplet_image, droplet_image, cv::Size(0,0), down_factor, down_factor);
+        cv::Mat droplet_image = std::get<0>(input)(detection.getRect()).clone();
         droplet.setDropletImage(droplet_image);
         frame.droplets.push_back(droplet);
     }
@@ -137,6 +134,9 @@ void mfn::VideoAnalyzer::detectContour(mfn::Frame &frame)
         for (mfn::RawDroplet & droplet: frame.droplets)
         {
             cv::Mat droplet_image = droplet.getDropletImage().clone();
+            const float down_factor = 0.5;
+            cv::resize(droplet_image, droplet_image, cv::Size(0,0), down_factor, down_factor);
+
             cv::fastNlMeansDenoising(droplet_image, droplet_image, 10, 7, 21);
             //cv::cvtColor(droplet_image, droplet_image, cv::COLOR_GRAY2BGR);
 
@@ -158,11 +158,25 @@ void mfn::VideoAnalyzer::detectContour(mfn::Frame &frame)
                 fgdModel,
                 5,
                 cv::GC_INIT_WITH_RECT);
+
+            cv::Mat lookUpTable(1, 256, CV_8U);
+            uint8_t * p = lookUpTable.data;
+            for(size_t j = 0; j < 256; ++j)
+                p[j] = 255;
+            p[0] = 0;
+            p[2] = 0;
+            cv::LUT(outMask, lookUpTable, outMask);
+
+            cv::resize(outMask, outMask, cv::Size(0, 0), 1/down_factor, 1/down_factor);
+            cv::imshow("Maks", outMask);
+            cv::waitKey(1);
+
         }
         std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
         spdlog::get("mfn_logger")->info("Contour detection for t={}s finished in {}ms",
             frame.getTime(),
             std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count());
+
     }
 }
 
