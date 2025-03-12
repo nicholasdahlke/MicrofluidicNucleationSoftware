@@ -8,7 +8,7 @@
 
 mfn::Droplet::Droplet(mfn::RawDroplet droplet, double time) : RawDroplet(droplet)
 {
-    time = time;
+    this->time = time;
 }
 
 double mfn::Droplet::getTime() const

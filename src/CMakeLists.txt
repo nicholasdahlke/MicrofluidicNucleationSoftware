@@ -27,7 +27,8 @@ add_library(microfluidic_nucleation ${SOURCE_LIST} ${HEADER_LIST})
 target_include_directories(microfluidic_nucleation PUBLIC ../include)
 
 find_package(OpenCV REQUIRED)
-target_link_libraries(microfluidic_nucleation ${OpenCV_LIBS})
+find_package(TBB REQUIRED)
+target_link_libraries(microfluidic_nucleation ${OpenCV_LIBS} TBB::tbb)
 set($ENV{OPENCV_OCL4DNN_CONFIG_PATH} "")
 target_compile_features(microfluidic_nucleation PUBLIC cxx_std_23)
 

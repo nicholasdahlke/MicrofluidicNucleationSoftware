@@ -13,7 +13,7 @@ namespace mfn
         bool show_frames_droplets = false;
         bool show_frames_displacement = false;
         bool show_displacement_vectors = false;
-        int right_border_displacement = 1e6;
+        int right_border_displacement = 1800;
         float max_movement_threshold_displacement = 1e4;
         int left_border_volume = 5;
         int right_border_volume = 1e4;

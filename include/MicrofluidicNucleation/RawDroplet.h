@@ -21,9 +21,8 @@ namespace mfn
         mfn::Detection detection;
         mfn::Vector2D movement{};
         double distance_to_next{};
-        std::vector<cv::Point> contour;
-        float temperature_k;
-        bool ignore;
+        float temperature_k{};
+        bool ignore = false;
 
     public:
         explicit RawDroplet(const mfn::Detection& detection);
@@ -38,17 +37,15 @@ namespace mfn
 
         void setDistanceToNext(double distanceToNext);
 
-        void setContour(const std::vector<cv::Point> &contour);
-
         bool isFrozen() const;
-
-        const std::vector<cv::Point> &getContour() const;
 
         float getTemperature() const;
 
         void setTemperature(float temperature_k);
 
         double getDistanceToNext() const;
+
+        double getVolume() const;
 
         const Detection &getDetection() const;
 

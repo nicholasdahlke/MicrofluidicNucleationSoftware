@@ -10,6 +10,7 @@
 #include <opencv2/photo.hpp>
 #include <execution>
 #include <chrono>
+#include <numbers>
 
 mfn::VideoAnalyzer::VideoAnalyzer(const mfn::Experiment &experiment, const AnalysisConfig &config)
 {
@@ -28,7 +29,9 @@ void mfn::VideoAnalyzer::openCapture()
     if(video_capture.get(cv::CAP_PROP_FRAME_COUNT) <= 0)
         spdlog::get("mfn_logger")->error("No frames found in video.");
 
-    if(video_capture.get(cv::CAP_PROP_FRAME_WIDTH) <= 0 || video_capture.get(cv::CAP_PROP_FRAME_HEIGHT) <= 0)
+    frame_size = cv::Size(video_capture.get(cv::CAP_PROP_FRAME_WIDTH), video_capture.get(cv::CAP_PROP_FRAME_HEIGHT));
+
+    if(frame_size.width <= 0 || frame_size.height <= 0)
         spdlog::get("mfn_logger")->error("Video dimensions must be non zero");
 
     spdlog::get("mfn_logger")->info("Successfully opened video with dimensions(h x w) {}px x {}px with {} frames",
@@ -48,7 +51,6 @@ void mfn::VideoAnalyzer::processLoop()
     while (frame_id < config.frame_stop || config.frame_stop <= 0)
     {
         spdlog::get("mfn_logger")->info("Starting frame queue of size {}", config.parallel);
-        std::vector<mfn::Frame> frame_queue;
         std::vector<std::tuple<cv::Mat, int>> raw_frame_queue;
         while(raw_frame_queue.size() < config.parallel || (frame_id > config.frame_stop && config.frame_stop > 0))
         {
@@ -63,8 +65,9 @@ void mfn::VideoAnalyzer::processLoop()
             frame_id++;
         }
 
-        for (const frame_transfer_t & frame : raw_frame_queue)
-            frame_queue.push_back(detectDroplets(frame));
+        //for (const frame_transfer_t & frame : raw_frame_queue)
+        //    frame_queue.push_back(detectDroplets(frame));
+        std::vector<mfn::Frame> frame_queue = detectDroplets(raw_frame_queue);
 
         // Detect collisions
         spdlog::get("mfn_logger")->info("Detecting collisions");
@@ -83,28 +86,51 @@ void mfn::VideoAnalyzer::processLoop()
             frame_queue.end(),
             detectContour
         );
-
-
-        spdlog::get("mfn_logger")->info("Frame queue finished");
+        frames.insert(frames.end(), frame_queue.begin(), frame_queue.end());
+        spdlog::get("mfn_logger")->info("Preprocessing queue finished");
     }
-
+    spdlog::get("mfn_logger")->info("Preprocessing loop finished");
+    spdlog::get("mfn_logger")->info("Calculating displacement");
+    calculateDisplacement(frames);
+    showDisplacement(frames);
 }
 
-mfn::Frame mfn::VideoAnalyzer::detectDroplets(const frame_transfer_t & input)
+
+std::vector<mfn::Frame> mfn::VideoAnalyzer::detectDroplets(const std::vector<frame_transfer_t> &input)
 {
-    Frame frame(std::get<1>(input) * experiment.getFrameRate());
-    std::vector<mfn::Detection> detections = yolo.process(std::get<0>(input));
-    for (const mfn::Detection & detection : detections)
+    std::vector<cv::Mat> frame_mats;
+    for (const frame_transfer_t & frame : input)
+        frame_mats.push_back(std::get<0>(frame));
+
+    std::vector<mfn::Frame> frames_detected;
+    std::vector<std::vector<mfn::Detection>> detections = yolo.process(frame_mats);
+    for (size_t i = 0; i < detections.size(); i++)
     {
-        mfn::RawDroplet droplet(detection);
-        //Enlarge rect to avoid problems with border collisions
-        cv::Mat droplet_image = std::get<0>(input)(detection.getRect()).clone();
-        droplet.setDropletImage(droplet_image);
-        frame.droplets.push_back(droplet);
+        Frame frame(static_cast<double>(std::get<1>(input[i])) / experiment.getFrameRate());
+        for (const mfn::Detection & detection : detections[i])
+        {
+            mfn::RawDroplet droplet(detection);
+            if (droplet.isFrozen())
+                droplet.setIgnore(true);
+            cv::Rect detection_rect = enlargeRect(detection.getRect(), 1.2);
+            if (isInsideFrame(detection_rect, frame_mats[i].size()))
+            {
+                cv::Mat droplet_image = frame_mats[i](detection_rect).clone();
+                droplet.setDropletImage(droplet_image);
+            }
+            else
+            {
+                droplet.setIgnore(true);
+            }
+
+            frame.droplets.push_back(droplet);
+        }
+        frames_detected.push_back(frame);
+        spdlog::get("mfn_logger")->info("Preprocessed frame {} with {} droplets detected", std::get<1>(input[i]), frame.droplets.size());
     }
-    spdlog::get("mfn_logger")->info("Preprocessed frame {} with {} droplets detected", std::get<1>(input), frame.droplets.size());
-    return frame;
+    return frames_detected;
 }
+
 
 void mfn::VideoAnalyzer::detectCollision(mfn::Frame & frame)
 {
@@ -112,10 +138,12 @@ void mfn::VideoAnalyzer::detectCollision(mfn::Frame & frame)
     {
         for (mfn::RawDroplet & droplet2 : frame.droplets)
         {
+            cv::Rect r1 = enlargeRect(droplet.getDetection().getRect(), 1.2);
+            cv::Rect r2 = enlargeRect(droplet2.getDetection().getRect(), 1.2);
             if
             (
-                droplet.getDetection().getRect() != droplet2.getDetection().getRect() &&
-                (droplet.getDetection().getRect() & droplet2.getDetection().getRect()).area() > 0
+                r1 != r2 &&
+                (r1 & r2).area() > 0
             )
             {
                 droplet.setIgnore(true);
@@ -128,49 +156,85 @@ void mfn::VideoAnalyzer::detectCollision(mfn::Frame & frame)
 
 void mfn::VideoAnalyzer::detectContour(mfn::Frame &frame)
 {
-    if (frame.droplets.size() > 0)
+    if (!frame.droplets.empty())
     {
         std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
         for (mfn::RawDroplet & droplet: frame.droplets)
         {
-            cv::Mat droplet_image = droplet.getDropletImage().clone();
-            const float down_factor = 0.5;
-            cv::resize(droplet_image, droplet_image, cv::Size(0,0), down_factor, down_factor);
+            if (!droplet.getIgnore())
+            {
+                cv::Mat droplet_image = droplet.getDropletImage().clone();
+                constexpr float down_factor = 0.5;
+                cv::resize(droplet_image, droplet_image, cv::Size(0,0), down_factor, down_factor);
 
-            cv::fastNlMeansDenoising(droplet_image, droplet_image, 10, 7, 21);
-            //cv::cvtColor(droplet_image, droplet_image, cv::COLOR_GRAY2BGR);
+                cv::fastNlMeansDenoising(droplet_image, droplet_image, 10, 7, 21);
+                //cv::cvtColor(droplet_image, droplet_image, cv::COLOR_GRAY2BGR);
 
-            cv::Mat bgdModel, fgdModel, outMask;
-            const float scaling = 0.9;
+                cv::Mat temp;
+                cv::GaussianBlur(droplet_image, temp, cv::Size(0, 0), 10);
+                cv::addWeighted(droplet_image, 4, temp, -3, 0, droplet_image);
 
-            cv::Rect grabcut_rect;
+                cv::Mat bgdModel, fgdModel, outMask;
+                constexpr float scaling = 0.9;
 
-            // Define the rectangle containing the droplet
-            grabcut_rect.x = (droplet_image.size[0] * (1 - scaling))/2;
-            grabcut_rect.y = (droplet_image.size[1] * (1 - scaling))/2;
-            grabcut_rect.height = droplet_image.size[0] * scaling;
-            grabcut_rect.width = droplet_image.size[1] * scaling;
+                cv::Rect grabcut_rect;
 
-            cv::grabCut(droplet_image,
-                outMask,
-                grabcut_rect,
-                bgdModel,
-                fgdModel,
-                5,
-                cv::GC_INIT_WITH_RECT);
+                // Define the rectangle containing the droplet
+                grabcut_rect.x = (droplet_image.size[0] * (1 - scaling))/2;
+                grabcut_rect.y = (droplet_image.size[1] * (1 - scaling))/2;
+                grabcut_rect.height = droplet_image.size[0] * scaling;
+                grabcut_rect.width = droplet_image.size[1] * scaling;
 
-            cv::Mat lookUpTable(1, 256, CV_8U);
-            uint8_t * p = lookUpTable.data;
-            for(size_t j = 0; j < 256; ++j)
-                p[j] = 255;
-            p[0] = 0;
-            p[2] = 0;
-            cv::LUT(outMask, lookUpTable, outMask);
+                cv::grabCut(droplet_image,
+                    outMask,
+                    grabcut_rect,
+                    bgdModel,
+                    fgdModel,
+                    5,
+                    cv::GC_INIT_WITH_RECT);
 
-            cv::resize(outMask, outMask, cv::Size(0, 0), 1/down_factor, 1/down_factor);
-            cv::imshow("Maks", outMask);
-            cv::waitKey(1);
+                cv::Mat lookUpTable(1, 256, CV_8U);
+                uint8_t * p = lookUpTable.data;
+                for(size_t j = 0; j < 256; ++j)
+                    p[j] = 255;
+                p[0] = 0;
+                p[2] = 0;
+                cv::LUT(outMask, lookUpTable, outMask);
 
+                cv::resize(outMask, outMask, cv::Size(0, 0), 1/down_factor, 1/down_factor);
+                cv::resize(droplet_image, droplet_image, cv::Size(0, 0), 1/down_factor, 1/down_factor);
+                std::vector<std::vector<cv::Point> > contours;
+                cv::findContours(outMask, contours, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE, cv::Point(0, 0));
+                if (!contours.empty())
+                {
+                    // Find contour with the largest area
+                    std::vector<cv::Point> contour = *std::ranges::max_element(contours,
+                                                                               [](const std::vector<cv::Point> &a,
+                                                                                  const std::vector<cv::Point> &b) -> bool {
+                                                                                   return cv::contourArea(a) <
+                                                                                          cv::contourArea(b);
+                                                                               });
+                    if (contour.size() > 5) // Check if enough points are present
+                    {
+                        cv::RotatedRect ellipse_fit = cv::fitEllipse(contour);
+                        double ellipse_area = std::numbers::pi * ellipse_fit.size.width * ellipse_fit.size.height;
+                        double error = abs(ellipse_area - cv::contourArea(contour));
+                        spdlog::get("mfn_logger")->info("Ellipse fitted with an accuracy of {}%", 100*(error/ellipse_area));
+                        ellipse_fit.center.x += droplet.getDetection().getRect().x;
+                        ellipse_fit.center.y += droplet.getDetection().getRect().y;
+                        droplet.setEllipse(ellipse_fit);
+                    }
+                    else
+                    {
+                        droplet.setIgnore(true);
+                    }
+                }
+                else
+                {
+                    droplet.setIgnore(true);
+                }
+
+            }
         }
         std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
         spdlog::get("mfn_logger")->info("Contour detection for t={}s finished in {}ms",
@@ -178,6 +242,71 @@ void mfn::VideoAnalyzer::detectContour(mfn::Frame &frame)
             std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count());
 
     }
+}
+
+void mfn::VideoAnalyzer::calculateDisplacement(mfn::RawDroplet &droplet, const mfn::Frame &next_frame)
+{
+    const cv::Point droplet_center = droplet.getMidpoint();
+    if (droplet_center.x > config.right_border_displacement)
+    {
+        spdlog::get("mfn_logger")->error("Droplet behind border, not calculating displacement.");
+        return;
+    }
+    std::vector<mfn::Vector2D> displacements;
+    for (const mfn::RawDroplet & next_droplet : next_frame.droplets)
+    {
+        mfn::Vector2D displacement({
+            static_cast<double>(next_droplet.getMidpoint().x - droplet_center.x),
+            static_cast<double>(next_droplet.getMidpoint().y - droplet_center.y)});
+        if (displacement.content[0] > 0 && displacement.content[0] < config.max_movement_threshold_displacement) // Check if displacement is positive and smaller than threshold
+            displacements.push_back(displacement);
+    }
+
+    if (displacements.empty())
+    {
+        spdlog::get("mfn_logger")->error("Displacement calculation failed");
+        return;
+    }
+
+    mfn::Vector2D displacement = *std::ranges::min_element(displacements,
+                                                           [](const mfn::Vector2D &a,
+                                                              const mfn::Vector2D &b) -> bool {
+                                                               return a.get_length() <
+                                                                     b.get_length();
+                                                           });
+    droplet.setMovement(displacement);
+}
+
+void mfn::VideoAnalyzer::calculateDisplacement(std::vector<mfn::Frame> &frames)
+{
+    std::ranges::sort(frames,[](const mfn::Frame &a, const mfn::Frame &b) -> bool{return a.getTime() < b.getTime();});
+    for (size_t i = 1; i < frames.size()-1; i++)
+    {
+        for (mfn::RawDroplet & droplet : frames[i].droplets)
+        {
+            calculateDisplacement(droplet, frames[i+1]);
+        }
+    }
+}
+
+void mfn::VideoAnalyzer::showDisplacement(const std::vector<mfn::Frame> & frames) const
+{
+    cv::Mat displacement_image = cv::Mat::zeros(frame_size, CV_8UC3);
+    for (const mfn::Frame & frame : frames)
+    {
+        for (const mfn::RawDroplet & droplet : frame.droplets)
+        {
+
+            if (droplet.getMovement().content[0] != 0 && droplet.getMovement().content[1] != 0)
+            {
+                cv::circle(displacement_image, droplet.getMidpoint(), 5, cv::Scalar(0, 0, 255), 2);
+                cv::Point displaced_point = droplet.getMidpoint() + droplet.getMovement().get_point();
+                cv::line(displacement_image, droplet.getMidpoint(), displaced_point, cv::Scalar(255, 0, 0), 2);
+            }
+        }
+    }
+    cv::imshow("displacement", displacement_image);
+    cv::waitKey(0);
 }
 
 cv::Rect mfn::VideoAnalyzer::enlargeRect(cv::Rect _rect, const double _factor)
@@ -188,11 +317,19 @@ cv::Rect mfn::VideoAnalyzer::enlargeRect(cv::Rect _rect, const double _factor)
     _rect.height *= _factor;
     _rect.x -= (_rect.width-pre_width)/2;
     _rect.y -= (_rect.height-pre_height)/2;
-    _rect.x = std::max(_rect.x, 0);
-    _rect.y = std::max(_rect.y, 0);
     return _rect;
 }
 
+bool mfn::VideoAnalyzer::isInsideFrame(cv::Rect _rect, cv::Size _size)
+{
+    if (_rect.x < 0 || _rect.y < 0)
+        return false;
+
+    if (_rect.x + _rect.width > _size.width || _rect.y + _rect.height > _size.height)
+        return false;
+
+    return true;
+}
 
 void mfn::VideoAnalyzer::analyze()
 {

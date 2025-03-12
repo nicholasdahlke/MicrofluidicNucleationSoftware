@@ -19,10 +19,11 @@ int main()
     auto logger = std::make_shared<spdlog::logger>("mfn_logger", spdlog::sinks_init_list({logger_file_sink, logger_console_sink}));
     spdlog::register_logger(logger);
     spdlog::get("mfn_logger")->info("Microfluidic Nucleation Counter started");
-    mfn::Experiment experiment("C:/Users/Nicholas Dahlke/Documents/Frozen T Cool -33-9 T Warm12-8 Oil 700 Water 10.mp4", 50, 1);
+    const mfn::Experiment experiment("/home/nicholas/testvideo/700Ul Oel; 10Ul Wasser; 30 Warm; -39 Kalt; 47,8196 Framerate-11222024174140-0000.mp4", 47.82, 1);
     mfn::AnalysisConfig config;
-    config.net_file = "C:/Users/Nicholas Dahlke/Documents/multiphase.onnx";
-    config.frame_stop = 100;
+    config.parallel = 100;
+    config.net_file = "/mnt/md0/Progammiersoftwareprojekte/CLionProjects/MicrofluidicNucleationSoftware/resources/fixed_100_model.onnx";
+    config.frame_stop = 200;
 
     mfn::VideoAnalyzer analyzer(experiment, config);
     analyzer.analyze();

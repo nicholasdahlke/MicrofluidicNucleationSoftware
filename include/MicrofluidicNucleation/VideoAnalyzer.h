@@ -30,13 +30,19 @@ namespace mfn
         std::vector<mfn::Frame> frames;
         YoloV5 yolo;
 
+        cv::Size frame_size;
+
         void openCapture();
         void processLoop();
-        mfn::Frame detectDroplets(const frame_transfer_t & input);
+        std::vector<mfn::Frame> detectDroplets(const std::vector<frame_transfer_t> & input);
 
         static void detectCollision(mfn::Frame & frame);
         static void detectContour(mfn::Frame & frame);
+        void calculateDisplacement(mfn::RawDroplet & droplet, const mfn::Frame & next_frame);
+        void calculateDisplacement(std::vector<mfn::Frame> &frames);
         static cv::Rect enlargeRect(cv::Rect _rect, double _factor);
+        static bool isInsideFrame(cv::Rect _rect, cv::Size _size);
+        void showDisplacement(const std::vector<mfn::Frame> & frames) const;
     };
 
 }

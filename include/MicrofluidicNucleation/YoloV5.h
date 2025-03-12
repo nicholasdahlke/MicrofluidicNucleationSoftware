@@ -20,7 +20,7 @@ namespace mfn
         YoloV5() = default;
 
         void open(const mfn::AnalysisConfig &config);
-        std::vector<mfn::Detection> process(const cv::Mat &input);
+        //std::vector<mfn::Detection> process(const cv::Mat &input);
         std::vector<std::vector<mfn::Detection>> process(const std::vector<cv::Mat> & inputs);
 
     private:
@@ -28,8 +28,8 @@ namespace mfn
         cv::Size net_input_size;
         mfn::AnalysisConfig config;
 
-        std::vector<mfn::Detection> getDetectionFromOutput(const cv::Mat &input, const std::vector<cv::Mat> & outputs) const;
-
+        std::vector<mfn::Detection> getDetectionFromOutput(const cv::Mat &input, float * data) const;
+        std::vector<std::vector<mfn::Detection>> getDetectionsFromOutput(const std::vector<cv::Mat> &inputs, const std::vector<cv::Mat> & outputs) const;
 
     };
 }

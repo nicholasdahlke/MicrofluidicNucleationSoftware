@@ -1,5 +1,7 @@
 #include <opencv2/core/types.hpp>
 #include "MicrofluidicNucleation/RawDroplet.h"
+#include <numbers>
+#include "spdlog/spdlog.h"
 
 //
 // Created by nicholas on 23.02.25.
@@ -19,20 +21,12 @@ void mfn::RawDroplet::setDistanceToNext(double distanceToNext)
     distance_to_next = distanceToNext;
 }
 
-void mfn::RawDroplet::setContour(const std::vector <cv::Point> &contour)
-{
-    RawDroplet::contour = contour;
-}
 
 bool mfn::RawDroplet::isFrozen() const
 {
     return is_frozen;
 }
 
-const std::vector<cv::Point> &mfn::RawDroplet::getContour() const
-{
-    return contour;
-}
 
 float mfn::RawDroplet::getTemperature() const
 {
@@ -61,13 +55,15 @@ const mfn::Vector2D &mfn::RawDroplet::getMovement() const
 
 cv::Point mfn::RawDroplet::getMidpoint() const
 {
-    return ellipse.center;
+    if (!ignore)
+        return ellipse.center;
+    return (detection.getRect().br() + detection.getRect().tl())*0.5;
 }
 
 mfn::RawDroplet::RawDroplet(const mfn::Detection& detection)
 {
     RawDroplet::detection = detection;
-    is_frozen = (detection.getDetectionType() == "droplet_frozen");
+    is_frozen = detection.getDetectionType() == "droplets_frozen";
 }
 
 const cv::Mat &mfn::RawDroplet::getDropletImage() const
@@ -88,4 +84,16 @@ bool mfn::RawDroplet::getIgnore() const
 void mfn::RawDroplet::setIgnore(bool ignore)
 {
     this->ignore = ignore;
+}
+
+double mfn::RawDroplet::getVolume() const
+{
+    if (ignore)
+    {
+        spdlog::get("mfn_logger")->error("Droplet has no calculated volume");
+        return 0.0;
+    }
+
+    return std::numbers::pi * ellipse.size.height * ellipse.size.width;
+
 }

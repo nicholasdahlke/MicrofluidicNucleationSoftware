@@ -6,6 +6,7 @@
 #define MICROFLUIDICNUCLEATIONSOFTWARE_VECTOR2D_H
 
 #include <array>
+#include <opencv2/core/types.hpp>
 
 namespace mfn
 {
@@ -19,7 +20,8 @@ namespace mfn
 
         explicit Vector2D(vector_type _content);
         Vector2D() = default;
-        double get_length();
+        double get_length() const;
+        cv::Point get_point() const;
 
 
     };
