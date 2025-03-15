@@ -8,7 +8,8 @@
 #include <MicrofluidicNucleation/VideoAnalyzer.h>
 #include <MicrofluidicNucleation/AnalysisConfig.h>
 #include <MicrofluidicNucleation/Experiment.h>
-
+#include <MicrofluidicNucleation/ResultsWriter.h>
+#include <MicrofluidicNucleation/TemperatureReader.h>
 
 
 
@@ -23,10 +24,18 @@ int main()
     mfn::AnalysisConfig config;
     config.parallel = 100;
     config.net_file = "/mnt/md0/Progammiersoftwareprojekte/CLionProjects/MicrofluidicNucleationSoftware/resources/fixed_100_model.onnx";
-    config.frame_stop = 200;
+    config.frame_stop = 100;
 
-    mfn::VideoAnalyzer analyzer(experiment, config);
+    mfn::TemperatureReader temperature_reader("/mnt/md0/Progammiersoftwareprojekte/CLionProjects/MicrofluidicNucleationSoftware/resources/temp_curve_example.tc");
+
+
+    mfn::VideoAnalyzer analyzer(experiment, config, temperature_reader);
     analyzer.analyze();
     spdlog::get("mfn_logger")->info("Microfluidic Nucleation Counter finished");
-
+    mfn::ResultsWriter writer(analyzer);
+    std::tuple<int, int> droplet_count = writer.countDroplets();
+    spdlog::get("mfn_logger")->info("Droplets counted: {} are frozen, {} are liquid.",
+        std::get<0>(droplet_count),
+        std::get<1>(droplet_count));
+    return 0;
 }

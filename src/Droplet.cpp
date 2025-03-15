@@ -1,24 +1,88 @@
+#include <opencv2/core/types.hpp>
+#include "MicrofluidicNucleation/Droplet.h"
+#include <numbers>
+#include "spdlog/spdlog.h"
+
 //
 // Created by nicholas on 23.02.25.
 //
-
-#include <MicrofluidicNucleation/Droplet.h>
-#include <MicrofluidicNucleation/RawDroplet.h>
-
-
-mfn::Droplet::Droplet(mfn::RawDroplet droplet, double time) : RawDroplet(droplet)
+void mfn::Droplet::setEllipse(const cv::RotatedRect &ellipse)
 {
-    this->time = time;
+    Droplet::ellipse = ellipse;
 }
 
-double mfn::Droplet::getTime() const
+void mfn::Droplet::setMovement(const mfn::Vector2D &movement)
 {
-    return time;
+    Droplet::movement = movement;
 }
 
-void mfn::Droplet::setTime(double time)
+void mfn::Droplet::setDistanceToNext(double distanceToNext)
 {
-    Droplet::time = time;
+    distance_to_next = distanceToNext;
 }
 
 
+bool mfn::Droplet::isFrozen() const
+{
+    return is_frozen;
+}
+
+double mfn::Droplet::getDistanceToNext() const
+{
+    return distance_to_next;
+}
+
+const mfn::Detection &mfn::Droplet::getDetection() const
+{
+    return detection;
+}
+
+const mfn::Vector2D &mfn::Droplet::getMovement() const
+{
+    return movement;
+}
+
+cv::Point mfn::Droplet::getMidpoint() const
+{
+    if (!ignore)
+        return ellipse.center;
+    return (detection.getRect().br() + detection.getRect().tl())*0.5;
+}
+
+mfn::Droplet::Droplet(const mfn::Detection& detection)
+{
+    Droplet::detection = detection;
+    is_frozen = detection.getDetectionType() == "droplets_frozen";
+}
+
+const cv::Mat &mfn::Droplet::getDropletImage() const
+{
+    return droplet_image;
+}
+
+void mfn::Droplet::setDropletImage(const cv::Mat &dropletImage)
+{
+    droplet_image = dropletImage;
+}
+
+bool mfn::Droplet::getIgnore() const
+{
+    return ignore;
+}
+
+void mfn::Droplet::setIgnore(const bool ignore)
+{
+    this->ignore = ignore;
+}
+
+double mfn::Droplet::getVolume() const
+{
+    if (ignore)
+    {
+        spdlog::get("mfn_logger")->error("Droplet has no calculated volume");
+        return 0.0;
+    }
+
+    return std::numbers::pi * ellipse.size.height * ellipse.size.width;
+
+}

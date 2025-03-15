@@ -11,11 +11,14 @@
 #include <execution>
 #include <chrono>
 #include <numbers>
+#include <ranges>
 
-mfn::VideoAnalyzer::VideoAnalyzer(const mfn::Experiment &experiment, const AnalysisConfig &config)
+mfn::VideoAnalyzer::VideoAnalyzer(const mfn::Experiment &experiment, const AnalysisConfig &config, const TemperatureReader &temperature)
 {
     VideoAnalyzer::experiment = experiment;
     VideoAnalyzer::config = config;
+    VideoAnalyzer::temperatureReader = temperature;
+    distribution = std::uniform_int_distribution<>(50, 255);
     yolo.open(config);
 }
 
@@ -29,7 +32,7 @@ void mfn::VideoAnalyzer::openCapture()
     if(video_capture.get(cv::CAP_PROP_FRAME_COUNT) <= 0)
         spdlog::get("mfn_logger")->error("No frames found in video.");
 
-    frame_size = cv::Size(video_capture.get(cv::CAP_PROP_FRAME_WIDTH), video_capture.get(cv::CAP_PROP_FRAME_HEIGHT));
+    frame_size = cv::Size(static_cast<int>(video_capture.get(cv::CAP_PROP_FRAME_WIDTH)), static_cast<int>(video_capture.get(cv::CAP_PROP_FRAME_HEIGHT)));
 
     if(frame_size.width <= 0 || frame_size.height <= 0)
         spdlog::get("mfn_logger")->error("Video dimensions must be non zero");
@@ -43,9 +46,13 @@ void mfn::VideoAnalyzer::openCapture()
 void mfn::VideoAnalyzer::processLoop()
 {
     spdlog::get("mfn_logger")->info("Starting process loop");
+    const std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
 
     if (config.frame_start > 0)
         video_capture.set(cv::CAP_PROP_POS_FRAMES, config.frame_start - 1);
+
+    if (config.frame_stop <= 0)
+        config.frame_stop = video_capture.get(cv::CAP_PROP_FRAME_COUNT) -1;
 
     int frame_id = config.frame_start;
     while (frame_id < config.frame_stop || config.frame_stop <= 0)
@@ -65,8 +72,6 @@ void mfn::VideoAnalyzer::processLoop()
             frame_id++;
         }
 
-        //for (const frame_transfer_t & frame : raw_frame_queue)
-        //    frame_queue.push_back(detectDroplets(frame));
         std::vector<mfn::Frame> frame_queue = detectDroplets(raw_frame_queue);
 
         // Detect collisions
@@ -81,7 +86,7 @@ void mfn::VideoAnalyzer::processLoop()
         // Detect contours
         spdlog::get("mfn_logger")->info("Detecting contours");
         std::for_each(
-            std::execution::seq,
+            std::execution::par,
             frame_queue.begin(),
             frame_queue.end(),
             detectContour
@@ -90,10 +95,37 @@ void mfn::VideoAnalyzer::processLoop()
         spdlog::get("mfn_logger")->info("Preprocessing queue finished");
     }
     spdlog::get("mfn_logger")->info("Preprocessing loop finished");
+
     spdlog::get("mfn_logger")->info("Calculating displacement");
     calculateDisplacement(frames);
-    showDisplacement(frames);
+
+    spdlog::get("mfn_logger")->info("Counting droplets");
+    std::for_each(
+        std::execution::par,
+        frames.begin(),
+        frames.end(),
+        [this](mfn::Frame & frame){this->replaceDroplets(frame);}
+        );
+
+    spdlog::get("mfn_logger")->info("Writing temperature");
+    std::for_each(
+        std::execution::par,
+        frames.begin(),
+        frames.end(),
+        [&](mfn::Frame & frame) {writeTemperature(frame, temperatureReader);}
+        );
+
+
+    //showDisplacement(frames);
+    const std::chrono::duration<double> diff = std::chrono::high_resolution_clock::now() - begin;
+    spdlog::get("mfn_logger")->info("Processing loop done in {:.2f}min.", diff.count()/60.0f);
 }
+
+void mfn::VideoAnalyzer::writeTemperature(mfn::Frame &frame, const mfn::TemperatureReader &temperature)
+{
+    frame.setTemperature(temperature.getTemperature(frame.getTime()));
+}
+
 
 
 std::vector<mfn::Frame> mfn::VideoAnalyzer::detectDroplets(const std::vector<frame_transfer_t> &input)
@@ -106,13 +138,13 @@ std::vector<mfn::Frame> mfn::VideoAnalyzer::detectDroplets(const std::vector<fra
     std::vector<std::vector<mfn::Detection>> detections = yolo.process(frame_mats);
     for (size_t i = 0; i < detections.size(); i++)
     {
-        Frame frame(static_cast<double>(std::get<1>(input[i])) / experiment.getFrameRate());
+        Frame frame(static_cast<double>((std::get<1>(input[i])) / experiment.getFrameRate())*1000);
         for (const mfn::Detection & detection : detections[i])
         {
-            mfn::RawDroplet droplet(detection);
+            mfn::Droplet droplet(detection);
             if (droplet.isFrozen())
                 droplet.setIgnore(true);
-            cv::Rect detection_rect = enlargeRect(detection.getRect(), 1.2);
+            cv::Rect detection_rect = enlargeRect(detection.getRect());
             if (isInsideFrame(detection_rect, frame_mats[i].size()))
             {
                 cv::Mat droplet_image = frame_mats[i](detection_rect).clone();
@@ -134,12 +166,12 @@ std::vector<mfn::Frame> mfn::VideoAnalyzer::detectDroplets(const std::vector<fra
 
 void mfn::VideoAnalyzer::detectCollision(mfn::Frame & frame)
 {
-    for (mfn::RawDroplet & droplet : frame.droplets)
+    for (mfn::Droplet & droplet : frame.droplets)
     {
-        for (mfn::RawDroplet & droplet2 : frame.droplets)
+        for (mfn::Droplet & droplet2 : frame.droplets)
         {
-            cv::Rect r1 = enlargeRect(droplet.getDetection().getRect(), 1.2);
-            cv::Rect r2 = enlargeRect(droplet2.getDetection().getRect(), 1.2);
+            cv::Rect r1 = enlargeRect(droplet.getDetection().getRect());
+            cv::Rect r2 = enlargeRect(droplet2.getDetection().getRect());
             if
             (
                 r1 != r2 &&
@@ -159,7 +191,7 @@ void mfn::VideoAnalyzer::detectContour(mfn::Frame &frame)
     if (!frame.droplets.empty())
     {
         std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
-        for (mfn::RawDroplet & droplet: frame.droplets)
+        for (mfn::Droplet & droplet: frame.droplets)
         {
             if (!droplet.getIgnore())
             {
@@ -168,7 +200,6 @@ void mfn::VideoAnalyzer::detectContour(mfn::Frame &frame)
                 cv::resize(droplet_image, droplet_image, cv::Size(0,0), down_factor, down_factor);
 
                 cv::fastNlMeansDenoising(droplet_image, droplet_image, 10, 7, 21);
-                //cv::cvtColor(droplet_image, droplet_image, cv::COLOR_GRAY2BGR);
 
                 cv::Mat temp;
                 cv::GaussianBlur(droplet_image, temp, cv::Size(0, 0), 10);
@@ -219,7 +250,9 @@ void mfn::VideoAnalyzer::detectContour(mfn::Frame &frame)
                         cv::RotatedRect ellipse_fit = cv::fitEllipse(contour);
                         double ellipse_area = std::numbers::pi * ellipse_fit.size.width * ellipse_fit.size.height;
                         double error = abs(ellipse_area - cv::contourArea(contour));
-                        spdlog::get("mfn_logger")->info("Ellipse fitted with an accuracy of {}%", 100*(error/ellipse_area));
+                        spdlog::get("mfn_logger")->info("Ellipse fitted with an accuracy of {:.2}%", 100*(error/ellipse_area));
+                        cv::ellipse(droplet_image, ellipse_fit, cv::Scalar(0,0,255), 2);
+                        cv::imwrite(std::to_string(frame.getTime()) + ".png", droplet_image);
                         ellipse_fit.center.x += droplet.getDetection().getRect().x;
                         ellipse_fit.center.y += droplet.getDetection().getRect().y;
                         droplet.setEllipse(ellipse_fit);
@@ -244,70 +277,104 @@ void mfn::VideoAnalyzer::detectContour(mfn::Frame &frame)
     }
 }
 
-void mfn::VideoAnalyzer::calculateDisplacement(mfn::RawDroplet &droplet, const mfn::Frame &next_frame)
+int mfn::VideoAnalyzer::calculateDisplacement(mfn::Droplet &droplet, const mfn::Frame &next_frame) const
 {
     const cv::Point droplet_center = droplet.getMidpoint();
     if (droplet_center.x > config.right_border_displacement)
     {
-        spdlog::get("mfn_logger")->error("Droplet behind border, not calculating displacement.");
-        return;
+        spdlog::get("mfn_logger")->warn("Droplet behind border, not calculating displacement.");
+        return 0;
     }
     std::vector<mfn::Vector2D> displacements;
-    for (const mfn::RawDroplet & next_droplet : next_frame.droplets)
+    for (const mfn::Droplet & next_droplet : next_frame.droplets)
     {
         mfn::Vector2D displacement({
             static_cast<double>(next_droplet.getMidpoint().x - droplet_center.x),
             static_cast<double>(next_droplet.getMidpoint().y - droplet_center.y)});
-        if (displacement.content[0] > 0 && displacement.content[0] < config.max_movement_threshold_displacement) // Check if displacement is positive and smaller than threshold
+
+        if (displacement.content[0] > 0 && displacement.get_length() < config.max_movement_threshold_displacement) // Check if displacement is positive and smaller than threshold
             displacements.push_back(displacement);
     }
 
-    if (displacements.empty())
+
+
+    if (displacements.empty() && next_frame.droplets.empty())
     {
-        spdlog::get("mfn_logger")->error("Displacement calculation failed");
-        return;
+        spdlog::get("mfn_logger")->warn("No droplets present in next frame. This is probably normal.");
+        return 0;
     }
 
-    mfn::Vector2D displacement = *std::ranges::min_element(displacements,
+    if (displacements.empty())
+        return 0;
+
+    const mfn::Vector2D displacement = *std::ranges::min_element(displacements,
                                                            [](const mfn::Vector2D &a,
                                                               const mfn::Vector2D &b) -> bool {
                                                                return a.get_length() <
                                                                      b.get_length();
                                                            });
     droplet.setMovement(displacement);
+    return static_cast<int>(displacements.size());
 }
 
-void mfn::VideoAnalyzer::calculateDisplacement(std::vector<mfn::Frame> &frames)
+void mfn::VideoAnalyzer::calculateDisplacement(std::vector<mfn::Frame> &frames) const
 {
     std::ranges::sort(frames,[](const mfn::Frame &a, const mfn::Frame &b) -> bool{return a.getTime() < b.getTime();});
     for (size_t i = 1; i < frames.size()-1; i++)
     {
-        for (mfn::RawDroplet & droplet : frames[i].droplets)
+        for (mfn::Droplet & droplet : frames[i].droplets)
         {
-            calculateDisplacement(droplet, frames[i+1]);
+            if (calculateDisplacement(droplet, frames[i+1]) == 0)
+                spdlog::get("mfn_logger")->warn("Displacement for frame at t={}s not calculated.", frames[i].getTime());
         }
     }
 }
 
-void mfn::VideoAnalyzer::showDisplacement(const std::vector<mfn::Frame> & frames) const
+void mfn::VideoAnalyzer::showDisplacement(const std::vector<mfn::Frame> & frames)
 {
     cv::Mat displacement_image = cv::Mat::zeros(frame_size, CV_8UC3);
     for (const mfn::Frame & frame : frames)
     {
-        for (const mfn::RawDroplet & droplet : frame.droplets)
+        for (const mfn::Droplet & droplet : frame.droplets)
         {
 
             if (droplet.getMovement().content[0] != 0 && droplet.getMovement().content[1] != 0)
             {
                 cv::circle(displacement_image, droplet.getMidpoint(), 5, cv::Scalar(0, 0, 255), 2);
-                cv::Point displaced_point = droplet.getMidpoint() + droplet.getMovement().get_point();
-                cv::line(displacement_image, droplet.getMidpoint(), displaced_point, cv::Scalar(255, 0, 0), 2);
+                const cv::Point displaced_point = droplet.getMidpoint() + droplet.getMovement().get_point();
+                const int frame_middle = frame_size.width / 2;
+                int thickness = 1;
+                if (droplet.getMidpoint().x < frame_middle && displaced_point.x > frame_middle) // If the displacement crossed the frame middle
+                {
+                    thickness = 4;
+                }
+                cv::line(displacement_image, droplet.getMidpoint(), displaced_point, getRandomColor(), thickness);
+                cv::imshow("displacement", displacement_image);
+                cv::waitKey(500);
             }
         }
     }
-    cv::imshow("displacement", displacement_image);
-    cv::waitKey(0);
 }
+
+void mfn::VideoAnalyzer::replaceDroplets(mfn::Frame &frame) const
+{
+    bool droplet_found = false;
+    for (mfn::Droplet & droplet : frame.droplets)
+    {
+        mfn::Vector2D displacement = droplet.getMovement();
+        const int frame_middle = frame_size.width / 2;
+        if (droplet.getMidpoint().x < frame_middle && (droplet.getMidpoint() + displacement.get_point()).x > frame_middle)
+        {
+            frame.droplets.clear();
+            frame.droplets.push_back(droplet);
+            droplet_found = true;
+            break;
+        }
+    }
+    if (!droplet_found)
+        frame.droplets.clear();
+}
+
 
 cv::Rect mfn::VideoAnalyzer::enlargeRect(cv::Rect _rect, const double _factor)
 {
@@ -320,7 +387,7 @@ cv::Rect mfn::VideoAnalyzer::enlargeRect(cv::Rect _rect, const double _factor)
     return _rect;
 }
 
-bool mfn::VideoAnalyzer::isInsideFrame(cv::Rect _rect, cv::Size _size)
+bool mfn::VideoAnalyzer::isInsideFrame(const cv::Rect _rect, const cv::Size _size)
 {
     if (_rect.x < 0 || _rect.y < 0)
         return false;
@@ -335,4 +402,17 @@ void mfn::VideoAnalyzer::analyze()
 {
     openCapture();
     processLoop();
+}
+
+std::vector<mfn::Frame> mfn::VideoAnalyzer::getFrames() const
+{
+    return frames;
+}
+
+cv::Scalar mfn::VideoAnalyzer::getRandomColor()
+{
+    const double c1 = distribution(generator);
+    const double c2 = distribution(generator);
+    const double  c3 = distribution(generator);
+    return {c1, c2, c3};
 }

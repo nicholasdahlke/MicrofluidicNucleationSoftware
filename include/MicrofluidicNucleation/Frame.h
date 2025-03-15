@@ -5,7 +5,7 @@
 #ifndef MICROFLUIDICNUCLEATIONSOFTWARE_FRAME_H
 #define MICROFLUIDICNUCLEATIONSOFTWARE_FRAME_H
 #include <vector>
-#include <MicrofluidicNucleation/RawDroplet.h>
+#include <MicrofluidicNucleation/Droplet.h>
 
 
 namespace mfn
@@ -13,12 +13,15 @@ namespace mfn
     class Frame
     {
     public:
-        std::vector<mfn::RawDroplet> droplets;
+        std::vector<mfn::Droplet> droplets;
 
         explicit Frame(double time);
         double getTime() const;
+        float getTemperature() const;
+        void setTemperature(float temperature_k);
 
     private:
+        float temperature_k{};
         double time;
     };
 }

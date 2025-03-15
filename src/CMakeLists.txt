@@ -1,7 +1,6 @@
 set(HEADER_LIST
         "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/Vector2D.h"
         "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/Detection.h"
-        "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/RawDroplet.h"
         "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/Droplet.h"
         "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/Frame.h"
         "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/VideoAnalyzer.h"
@@ -9,18 +8,20 @@ set(HEADER_LIST
         "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/AnalysisConfig.h"
         "${PROJECT_SOURCE_DIR}/include/spdlog/spdlog.h"
         "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/YoloV5.h"
-
+        "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/ResultsWriter.h"
+        "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/TemperatureReader.h"
 )
 
 set(SOURCE_LIST
         Vector2D.cpp
         Detection.cpp
-        RawDroplet.cpp
         Droplet.cpp
         Frame.cpp
         VideoAnalyzer.cpp
         Experiment.cpp
         YoloV5.cpp
+        ResultsWriter.cpp
+        TemperatureReadder.cpp
 )
 add_library(microfluidic_nucleation ${SOURCE_LIST} ${HEADER_LIST})
 

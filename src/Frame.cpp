@@ -8,7 +8,17 @@ double mfn::Frame::getTime() const
     return time;
 }
 
-mfn::Frame::Frame(double time)
+mfn::Frame::Frame(const double time)
 {
     Frame::time = time;
+}
+
+void mfn::Frame::setTemperature(float temperature_k)
+{
+    this->temperature_k = temperature_k;
+}
+
+float mfn::Frame::getTemperature() const
+{
+    return temperature_k;
 }
