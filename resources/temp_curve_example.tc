@@ -1,6 +1,0 @@
-# This is a comment. Invalid instructions will be ignored
-# The instructions MUST begin with a stable temp otherwise it won't work.
-# Starting with a linear ramp is only permissible if START_TEMP is set.
-START_TEMP;-30;
-LIN_RAMP_TIME;-35;10000
-STABLE_TEMP;-35;0

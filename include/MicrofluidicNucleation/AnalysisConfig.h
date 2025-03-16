@@ -28,7 +28,7 @@ namespace mfn
         int skip_frames_volume = 0;
         int frame_start = 0;
         int frame_stop = 0;
-        int parallel = 24;
+        int parallel = 100;
     };
 }
 #endif //MICROFLUIDICNUCLEATIONSOFTWARE_ANALYSISCONFIG_H

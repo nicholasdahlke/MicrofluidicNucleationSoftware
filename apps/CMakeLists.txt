@@ -1,3 +1,4 @@
 add_executable(MicrofluidicNucleationApp app.cpp)
 target_compile_features(MicrofluidicNucleationApp PRIVATE cxx_std_23)
-target_link_libraries(MicrofluidicNucleationApp PRIVATE microfluidic_nucleation)
+
+target_link_libraries(MicrofluidicNucleationApp PRIVATE microfluidic_nucleation microfluidic_nucleation_gui)

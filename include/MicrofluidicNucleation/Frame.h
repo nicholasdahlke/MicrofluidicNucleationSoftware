@@ -15,14 +15,14 @@ namespace mfn
     public:
         std::vector<mfn::Droplet> droplets;
 
-        explicit Frame(double time);
+        explicit Frame(double time_ms);
         double getTime() const;
         float getTemperature() const;
-        void setTemperature(float temperature_k);
+        void setTemperature(float temperature_c);
 
     private:
-        float temperature_k{};
-        double time;
+        float temperature_c{};
+        double time_ms;
     };
 }
 #endif //MICROFLUIDICNUCLEATIONSOFTWARE_FRAME_H

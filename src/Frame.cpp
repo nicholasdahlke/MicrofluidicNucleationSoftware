@@ -5,20 +5,20 @@
 //
 double mfn::Frame::getTime() const
 {
-    return time;
+    return time_ms;
 }
 
-mfn::Frame::Frame(const double time)
+mfn::Frame::Frame(const double time_ms)
 {
-    Frame::time = time;
+    Frame::time_ms = time_ms;
 }
 
-void mfn::Frame::setTemperature(float temperature_k)
+void mfn::Frame::setTemperature(float temperature_c)
 {
-    this->temperature_k = temperature_k;
+    this->temperature_c = temperature_c;
 }
 
 float mfn::Frame::getTemperature() const
 {
-    return temperature_k;
+    return temperature_c;
 }

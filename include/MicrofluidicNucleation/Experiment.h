@@ -11,19 +11,20 @@ namespace mfn
     class Experiment
     {
     public:
-        Experiment(const std::filesystem::path &video, double frameRate, double calibration);
+        Experiment(const std::filesystem::path &video, double frameRate, double calibration, double heater_temperature);
         Experiment() = default;
 
         const std::filesystem::path &getVideo() const;
 
         double getFrameRate() const;
-
+        double getHeaterTemperature() const;
         double getCalibration() const;
 
     private:
         std::filesystem::path video;
         double frame_rate = 0;
         double calibration = 0;
+        double heater_temperature = 0;
     };
 
 

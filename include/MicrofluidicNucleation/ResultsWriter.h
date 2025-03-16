@@ -5,6 +5,7 @@
 #ifndef RESULTSWRITER_H
 #define RESULTSWRITER_H
 #include <MicrofluidicNucleation/VideoAnalyzer.h>
+#include <MicrofluidicNucleation/DropletResult.h>
 namespace mfn
 {
     class ResultsWriter
@@ -12,10 +13,11 @@ namespace mfn
     public:
         explicit ResultsWriter(const VideoAnalyzer& videoAnalyzer);
         std::tuple<int, int> countDroplets() const;
+        std::vector<mfn::DropletResult> getDropletResults() const;
 
 
     private:
-        VideoAnalyzer videoAnalyzer;
+        mfn::VideoAnalyzer videoAnalyzer;
 
     };
 }

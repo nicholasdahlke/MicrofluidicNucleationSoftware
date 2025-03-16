@@ -31,3 +31,13 @@ std::tuple<int, int> mfn::ResultsWriter::countDroplets() const
     return std::make_tuple(frozen_count, liquid_count);
 }
 
+std::vector<mfn::DropletResult> mfn::ResultsWriter::getDropletResults() const
+{
+    std::vector<mfn::DropletResult> results;
+    for (const Frame & frame : videoAnalyzer.getFrames())
+    {
+        for (const Droplet & droplet : frame.droplets)
+            results.emplace_back(frame, droplet);
+    }
+    return results;
+}

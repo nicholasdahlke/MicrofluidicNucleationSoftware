@@ -79,7 +79,7 @@ double mfn::Droplet::getVolume() const
 {
     if (ignore)
     {
-        spdlog::get("mfn_logger")->error("Droplet has no calculated volume");
+        spdlog::get("mfn_logger")->warn("Droplet has no calculated volume");
         return 0.0;
     }
 
