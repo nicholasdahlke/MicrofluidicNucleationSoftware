@@ -18,6 +18,9 @@ jobs:
 
     - name: Install OpenCV
       run: sudo apt install libopencv-dev -y
+
+    - name: Install Qt5
+      run: sudo apt install qtbase5-dev -y
     
 
     - name: Configure CMake
