@@ -3,10 +3,13 @@
 //
 
 #include <MicrofluidicNucleation/ResultsWriter.h>
+#include <MicrofluidicNucleation/Vector2D.h>
+#include <cmath>
 
-mfn::ResultsWriter::ResultsWriter(const VideoAnalyzer &videoAnalyzer)
+mfn::ResultsWriter::ResultsWriter(const VideoAnalyzer &videoAnalyzer, const Experiment &experiment)
 {
     this->videoAnalyzer = videoAnalyzer;
+    this->experiment = experiment;
 }
 
 std::tuple<int, int> mfn::ResultsWriter::countDroplets() const
@@ -36,8 +39,26 @@ std::vector<mfn::DropletResult> mfn::ResultsWriter::getDropletResults() const
     std::vector<mfn::DropletResult> results;
     for (const Frame & frame : videoAnalyzer.getFrames())
     {
-        for (const Droplet & droplet : frame.droplets)
-            results.emplace_back(frame, droplet);
+        for (Droplet droplet : frame.droplets)
+        {
+            results.emplace_back(droplet.getVolume()*pow(experiment.getCalibration(), 2), droplet.isFrozen(), frame.getTime(), frame.getTemperature());
+        }
     }
     return results;
+}
+
+std::vector<double> mfn::ResultsWriter::getSpeeds() const
+{
+    std::vector<double> speeds;
+    for (const Frame & frame : videoAnalyzer.getFrames())
+    {
+        for (const Droplet & droplet : frame.droplets)
+        {
+            Vector2D movement = droplet.getMovement();
+            movement.content[0] *= experiment.getCalibration();
+            movement.content[1] *= experiment.getCalibration();
+            speeds.push_back(movement.get_length()*experiment.getFrameRate());
+        }
+    }
+    return speeds;
 }

@@ -1,0 +1,18 @@
+[config]
+show_frames_droplets = false
+show_frames_displacement = false
+show_displacement_vectors = false
+right_border_displacement = 1800
+max_movement_threshold_displacement = 1e4
+left_border_volume = 5
+right_border_volume = 1e4
+threshold_count = 20
+calib = 1.0
+score_threshold = 0.5
+nms_threshold = 0.4
+confidence_threshold = 0.7
+speed_border_left = 50
+speed_border_right = 50
+net_file = "/mnt/md0/Progammiersoftwareprojekte/CLionProjects/MicrofluidicNucleationSoftware/resources/fixed_100_model.onnx"
+parallel = 100
+frame_stop = 300

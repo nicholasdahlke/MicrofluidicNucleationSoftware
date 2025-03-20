@@ -12,6 +12,7 @@
 #include <spdlog/sinks/qt_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <MicroCalibrator/MicroCalibrator.h>
+#include <chrono>
 
 mfngui::MainWindow::MainWindow(QWidget *parent)
 {
@@ -19,7 +20,7 @@ mfngui::MainWindow::MainWindow(QWidget *parent)
     setWindowTitle("Microfluidic Nucleation Software");
 
     open_videos = new QPushButton("Open Videos");
-
+    open_videos->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
     table_widget = new QTableWidget();
     table_widget->setColumnCount(5);
     table_widget->setHorizontalHeaderLabels({
@@ -30,13 +31,26 @@ mfngui::MainWindow::MainWindow(QWidget *parent)
         "Heater temperature"
     });
     table_widget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    table_widget->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Interactive);
+    table_widget->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Interactive);
+
 
     process_log = new QTextEdit();
     process_log->setReadOnly(true);
+    std::filesystem::path log_path = std::string(std::getenv("HOME")) + "/MpembaLogs";
+    std::filesystem::create_directories(log_path);
     if (spdlog::get("mfn_logger") == nullptr)
     {
-        auto qt_logger_sink = std::make_shared<spdlog::sinks::qt_color_sink_mt>(process_log, 500);
-        auto logger_file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("logs/qtlog.txt", true);
+        const auto now = std::chrono::system_clock::now();
+        const std::time_t t_c = std::chrono::system_clock::to_time_t(now);
+
+        auto qt_logger_sink = std::make_shared<spdlog::sinks::qt_color_sink_mt>(process_log, 1e5);
+        std::stringstream filename;
+        filename << log_path.string()
+                 << "/log_"
+                 << std::put_time(std::localtime(&t_c), "%Y-%m-%d_%H-%M-%S")
+                 << ".txt";
+        auto logger_file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(filename.str(), true);
         const auto logger = std::make_shared<spdlog::logger>("mfn_logger", spdlog::sinks_init_list({logger_file_sink, qt_logger_sink}));
         spdlog::register_logger(logger);
     }
@@ -54,15 +68,17 @@ mfngui::MainWindow::MainWindow(QWidget *parent)
     calib_constant = new QLabel();
     calib_constant->setText(QString::number(calib_value));
 
+    load_config = new QPushButton("Load Config");
 
     layout = new QGridLayout();
-    layout->addWidget(open_videos, 0, 0, 1, 1);
+    layout->addWidget(open_videos, 0, 0, 2, 1);
     layout->addWidget(calibrate, 0, 1, 1, 1);
     layout->addWidget(calib_constant, 0, 2, 1, 1);
-    layout->addWidget(table_widget, 1, 0, 1, 3);
-    layout->addWidget(process_log, 3, 0, 3, 3);
-    layout->addWidget(start_analysis, 2, 0, 1, 1);
-    layout->addWidget(progress_bar, 2, 1, 1, 1);
+    layout->addWidget(load_config, 1, 1,1, 1 );
+    layout->addWidget(table_widget, 2, 0, 1, 3);
+    layout->addWidget(process_log, 4, 0, 3, 3);
+    layout->addWidget(start_analysis, 3, 0, 1, 1);
+    layout->addWidget(progress_bar, 3, 1, 1, 2);
     setLayout(layout);
 
     analysis_watcher = new QFutureWatcher<void>();
@@ -74,18 +90,17 @@ mfngui::MainWindow::MainWindow(QWidget *parent)
     connect(analysis_watcher, &QFutureWatcher<void>::finished, this, &MainWindow::startNextComputationSlot);
     connect(calibrate, &QPushButton::clicked, this, &MainWindow::calibrateSlot);
     connect(calibration_watcher, &QFutureWatcher<double>::finished, this, &MainWindow::isCalibratedSlot);
-    analysis_config.net_file = "/mnt/md0/Progammiersoftwareprojekte/CLionProjects/MicrofluidicNucleationSoftware/resources/fixed_100_model.onnx";
-    analysis_config.frame_stop = 100;
+    connect(load_config, &QPushButton::clicked, this, &MainWindow::loadConfigSlot);
 }
 
-void mfngui::MainWindow::openVideosSlot() const
+void mfngui::MainWindow::openVideosSlot()
 {
     const QStringList filters = {
         "Video Files (*.mp4 *.avi *.mov *.mkv *.wmv *.flv *.webm)"
     };
 
     QStringList files = QFileDialog::getOpenFileNames(
-        nullptr,
+        this,
         "Open Videos",
         QString(),
         filters.join(";;")
@@ -110,14 +125,13 @@ void mfngui::MainWindow::startAnalysisSlot()
         start_analysis->setEnabled(true);
         return;
     }
-    progress_bar->setRange(0, table_widget->rowCount());
+    progress_bar->setRange(0, table_widget->rowCount()-1);
     for (int row = 0; row < table_widget->rowCount(); ++row)
     {
-        std::filesystem::path video_file = (table_widget->item(row, 0))->text().toStdString();
+        std::filesystem::path video_file = table_widget->item(row, 0)->text().toStdString();
         const double frame_rate = std::stod((table_widget->item(row, 3))->text().toStdString());
-        const double calib = 1e-6;
         const double heater_temperature = std::stod((table_widget->item(row, 4))->text().toStdString());
-        mfn::Experiment experiment(video_file, frame_rate, calib, heater_temperature);
+        mfn::Experiment experiment(video_file, frame_rate, calib_value, heater_temperature);
         mfn::TemperatureReader temperature_reader;
 
         const QWidget *widget = table_widget->cellWidget(row, 2);
@@ -153,11 +167,12 @@ void mfngui::MainWindow::startNextComputationSlot()
     if (!video_queue.empty())
     {
         analyzer_argument_t video = video_queue.front();
-        progress_bar->setValue(table_widget->rowCount() - video_queue.size());
         video_queue.pop();
-        mfn::VideoAnalyzer analyzer(std::get<0>(video), analysis_config, std::get<1>(video));
-        QFuture<void> future = QtConcurrent::run(analyzer, &mfn::VideoAnalyzer::analyze);
+        progress_bar->setValue(table_widget->rowCount() - video_queue.size()); // TODO: Fix progress bar
+        auto analyzer = std::make_shared<mfn::VideoAnalyzer>(std::get<0>(video), analysis_config, std::get<1>(video));
+        QFuture<void> future = QtConcurrent::run(analyzer.get(), &mfn::VideoAnalyzer::analyze);  // Unsafe ?
         analysis_watcher->setFuture(future);
+        video_results.push_back(analyzer);
     }
     else
         start_analysis->setEnabled(true);
@@ -209,7 +224,7 @@ void mfngui::MainWindow::add_video(std::filesystem::path path) const
 
 void mfngui::MainWindow::calibrateSlot()
 {
-    auto calibrator = new MicroCalibrator("/home/nicholas/testvideo/700Ul Oel; 10Ul Wasser; 30 Warm; -39 Kalt; 47,8196 Framerate-11222024174140-0000.mp4");
+    MicroCalibrator calibrator(table_widget->item(0, 0)->text().toStdString()); // TODO: Fix memory leak
     QFuture<double> future = QtConcurrent::run(calibrator, &mfngui::MicroCalibrator::getCalibrationConstant);
     calibration_watcher->setFuture(future);
 }
@@ -219,4 +234,19 @@ void mfngui::MainWindow::isCalibratedSlot()
     calib_value = calibration_watcher->result();
     start_analysis->setEnabled(true);
     calib_constant->setText(QString::number(calib_value));
+    spdlog::get("mfn_logger")->info("Calibration constant set to {} m/px", calib_value);
+}
+
+void mfngui::MainWindow::loadConfigSlot()
+{
+    QString file_name = QFileDialog::getOpenFileName(
+        this,
+        "Open Config File",
+        QString(),
+        "Config Files (*.cf)"
+        );
+    if (!file_name.isEmpty())
+        analysis_config = mfn::AnalysisConfig(file_name.toStdString());
+    else
+        spdlog::get("mfn_logger")->error("Error opening config file");
 }

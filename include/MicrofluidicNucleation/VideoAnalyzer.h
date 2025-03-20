@@ -35,7 +35,7 @@ namespace mfn
         YoloV5 yolo;
 
         cv::Size frame_size;
-
+        std::filesystem::path volume_images_path;
         std::default_random_engine generator;
         std::uniform_int_distribution<> distribution;
 
@@ -44,7 +44,7 @@ namespace mfn
         std::vector<mfn::Frame> detectDroplets(const std::vector<frame_transfer_t> & input);
 
         static void detectCollision(mfn::Frame & frame);
-        static void detectContour(mfn::Frame & frame);
+        static void detectContour(mfn::Frame & frame, std::filesystem::path &image_path);
         int calculateDisplacement(mfn::Droplet & droplet, const mfn::Frame & next_frame) const;
         void calculateDisplacement(std::vector<mfn::Frame> &frames) const;
         static void writeTemperature(mfn::Frame & frame, const mfn::TemperatureReader & temperature);

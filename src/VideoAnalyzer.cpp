@@ -26,6 +26,8 @@ mfn::VideoAnalyzer::VideoAnalyzer(const mfn::Experiment &experiment, const Analy
 void mfn::VideoAnalyzer::openCapture()
 {
     video_capture.open(experiment.getVideo().string());
+    volume_images_path = experiment.getVideo().parent_path().string() + "/" + experiment.getVideo().stem().string() + "-volume-images/";
+    std::filesystem::create_directories(volume_images_path);
     if(!video_capture.isOpened())
         spdlog::get("mfn_logger")->error("An error occurred opening the video capture.");
 
@@ -89,7 +91,7 @@ void mfn::VideoAnalyzer::processLoop()
             std::execution::par,
             frame_queue.begin(),
             frame_queue.end(),
-            detectContour
+            [&](mfn::Frame & frame){detectContour(frame, volume_images_path);}
         );
         frames.insert(frames.end(), frame_queue.begin(), frame_queue.end());
         spdlog::get("mfn_logger")->info("Preprocessing queue finished");
@@ -186,7 +188,7 @@ void mfn::VideoAnalyzer::detectCollision(mfn::Frame & frame)
     }
 }
 
-void mfn::VideoAnalyzer::detectContour(mfn::Frame &frame)
+void mfn::VideoAnalyzer::detectContour(mfn::Frame &frame, std::filesystem::path &image_path)
 {
     if (!frame.droplets.empty())
     {
@@ -252,7 +254,7 @@ void mfn::VideoAnalyzer::detectContour(mfn::Frame &frame)
                         double error = abs(ellipse_area - cv::contourArea(contour));
                         spdlog::get("mfn_logger")->info("Ellipse fitted with an accuracy of {:.2}%", 100*(error/ellipse_area));
                         cv::ellipse(droplet_image, ellipse_fit, cv::Scalar(0,0,255), 2);
-                        cv::imwrite(std::to_string(frame.getTime()) + ".png", droplet_image);
+                        cv::imwrite(image_path.string() + std::to_string(frame.getTime()) + ".png", droplet_image);
                         ellipse_fit.center.x += droplet.getDetection().getRect().x;
                         ellipse_fit.center.y += droplet.getDetection().getRect().y;
                         droplet.setEllipse(ellipse_fit);

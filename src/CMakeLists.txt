@@ -10,11 +10,13 @@ set(MFN_HEADER_LIST
         "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/VideoAnalyzer.h"
         "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/Experiment.h"
         "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/AnalysisConfig.h"
-        "${PROJECT_SOURCE_DIR}/include/spdlog/spdlog.h"
         "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/YoloV5.h"
         "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/ResultsWriter.h"
         "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/TemperatureReader.h"
         "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/DropletResult.h"
+        "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/CsvWriter.h"
+        "${PROJECT_SOURCE_DIR}/include/spdlog/spdlog.h"
+        "${PROJECT_SOURCE_DIR}/include/toml++/toml.hpp"
 )
 set(MFN_SOURCE_LIST
         Vector2D.cpp
@@ -27,6 +29,7 @@ set(MFN_SOURCE_LIST
         ResultsWriter.cpp
         TemperatureReader.cpp
         DropletResult.cpp
+        AnalysisConfig.cpp
 )
 
 

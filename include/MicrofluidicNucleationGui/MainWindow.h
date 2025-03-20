@@ -16,6 +16,8 @@
 #include <MicrofluidicNucleation/TemperatureReader.h>
 #include <queue>
 #include <tuple>
+#include <vector>
+#include <memory>
 #include <filesystem>
 
 
@@ -33,6 +35,7 @@ namespace mfngui
             QPushButton *open_videos;
             QPushButton *calibrate;
             QPushButton *start_analysis;
+            QPushButton *load_config;
             QTableWidget *table_widget;
             QTextEdit *process_log;
             QLabel *calib_constant;
@@ -43,16 +46,18 @@ namespace mfngui
             void add_video(std::filesystem::path path) const;
             mfn::AnalysisConfig analysis_config;
             std::queue<analyzer_argument_t> video_queue;
+            std::vector<std::shared_ptr<mfn::VideoAnalyzer>> video_results;
             QFutureWatcher<void> * analysis_watcher;
             QFutureWatcher<double> * calibration_watcher;
 
         private slots:
-            void openVideosSlot() const;
+            void openVideosSlot();
             void startAnalysisSlot();
             void scrollLogSlot() const;
             void startNextComputationSlot();
             void calibrateSlot();
             void isCalibratedSlot();
+            void loadConfigSlot();
     };
 }
 
