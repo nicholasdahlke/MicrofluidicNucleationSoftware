@@ -1,1 +1,2 @@
-"include/spdlog/**" linguist-vendored
+include/spdlog/** linguist-vendored
+include/toml++/** linguist-vendored
