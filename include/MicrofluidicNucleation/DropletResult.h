@@ -16,9 +16,10 @@ namespace mfn
         bool is_frozen;
         double time_ms;
         double temperature_c;
+        bool has_volume;
 
         DropletResult() = default;
-        DropletResult(double droplet_volume, bool is_frozen, double time_ms, double temperature_c);
+        DropletResult(double droplet_volume, bool is_frozen, double time_ms, double temperature_c, bool has_volume);
         DropletResult(const Frame& frame, const Droplet& droplet);
 
     };

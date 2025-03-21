@@ -5,6 +5,7 @@
 #ifndef MICROFLUIDICNUCLEATIONSOFTWARE_EXPERIMENT_H
 #define MICROFLUIDICNUCLEATIONSOFTWARE_EXPERIMENT_H
 #include <filesystem>
+#include <map>
 
 namespace mfn
 {
@@ -19,12 +20,14 @@ namespace mfn
         double getFrameRate() const;
         double getHeaterTemperature() const;
         double getCalibration() const;
+        std::map<std::string, double> getParameters() const;
 
     private:
         std::filesystem::path video;
         double frame_rate = 0;
         double calibration = 0;
         double heater_temperature = 0;
+        std::map<std::string, double> setup_parameters; // TODO: Read this from file
     };
 
 

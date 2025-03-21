@@ -13,6 +13,7 @@
 #include <opencv2/core.hpp>
 #include <vector>
 #include <random>
+#include <MicrofluidicNucleation/DropletResult.h>
 
 namespace mfn
 {
@@ -23,6 +24,7 @@ namespace mfn
         VideoAnalyzer() = default;
         void analyze();
         std::vector<mfn::Frame> getFrames() const;
+        std::vector<mfn::DropletResult> getDropletHeap() const;
 
     private:
         typedef std::tuple<cv::Mat, int> frame_transfer_t;
@@ -38,6 +40,8 @@ namespace mfn
         std::filesystem::path volume_images_path;
         std::default_random_engine generator;
         std::uniform_int_distribution<> distribution;
+
+        std::vector<mfn::DropletResult> dropletHeap;
 
         void openCapture();
         void processLoop();

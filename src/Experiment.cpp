@@ -21,6 +21,17 @@ mfn::Experiment::Experiment(const std::filesystem::path &video, double frameRate
     }
 
     Experiment::heater_temperature = heater_temperature;
+
+    setup_parameters["thermal_conductivity_tubing"] = 0.25;
+    setup_parameters["inner_radius_tubing"] = 0.0004;
+    setup_parameters["outer_radius_tubing"] = 0.000794;
+    setup_parameters["water_density"] = 997.0;
+    setup_parameters["cooler_length"] = 0.129115;
+}
+
+std::map<std::string, double> mfn::Experiment::getParameters() const
+{
+    return setup_parameters;
 }
 
 const std::filesystem::path &mfn::Experiment::getVideo() const

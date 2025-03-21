@@ -101,6 +101,15 @@ void mfn::VideoAnalyzer::processLoop()
     spdlog::get("mfn_logger")->info("Calculating displacement");
     calculateDisplacement(frames);
 
+    spdlog::get("mfn_logger")->info("Saving the droplets");
+    for (const Frame & frame : frames)
+    {
+        for (const Droplet & droplet : frame.droplets)
+        {
+            dropletHeap.emplace_back(frame, droplet);
+        }
+    }
+
     spdlog::get("mfn_logger")->info("Counting droplets");
     std::for_each(
         std::execution::par,
@@ -409,6 +418,11 @@ void mfn::VideoAnalyzer::analyze()
 std::vector<mfn::Frame> mfn::VideoAnalyzer::getFrames() const
 {
     return frames;
+}
+
+std::vector<mfn::DropletResult> mfn::VideoAnalyzer::getDropletHeap() const
+{
+    return dropletHeap;
 }
 
 cv::Scalar mfn::VideoAnalyzer::getRandomColor()

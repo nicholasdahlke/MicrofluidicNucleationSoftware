@@ -12,9 +12,9 @@
 #include <MicrofluidicNucleation/TemperatureReader.h>
 #include <MicrofluidicNucleationGui/MicrofluidicNucleationGui.h>
 #include <MicrofluidicNucleation/CsvWriter.h>
+#include <MicrofluidicNucleation/NucleationCalculator.h>
 
-
-int hmain()
+int main()
 {
     auto logger_file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("logs/log.txt", true);
     auto logger_console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
@@ -38,15 +38,17 @@ int hmain()
     for (double speed : writer.getSpeeds())
         speeds_vector.emplace_back(speed);
     mfn::CsvWriter::writeToCsvFile(speeds_vector, "out.csv");
-    std::tuple<int, int> droplet_count = writer.countDroplets();
     std::vector<mfn::DropletResult> results = writer.getDropletResults();
-    spdlog::get("mfn_logger")->info("Droplets counted: {} are frozen, {} are liquid.",
-        std::get<0>(droplet_count),
-        std::get<1>(droplet_count));
+    //mfn::NucleationCalculator calculator(results, config, writer.getSpeeds(), writer.getVolumes());
+    //std::tuple<int, int> droplet_count = calculator.countDroplets();
+
+    //spdlog::get("mfn_logger")->info("Droplets counted: {} are frozen, {} are liquid.",
+    //    std::get<0>(droplet_count),
+    //    std::get<1>(droplet_count));
     return 0;
 }
 
-int main(int argc, char **argv)
+int ddmain(int argc, char **argv)
 {
     return mfngui::MicrofluidicNucleationGui::main(argc, argv);
 }

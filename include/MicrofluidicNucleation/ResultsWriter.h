@@ -13,9 +13,9 @@ namespace mfn
     {
     public:
         explicit ResultsWriter(const VideoAnalyzer& videoAnalyzer, const Experiment &experiment);
-        std::tuple<int, int> countDroplets() const;
         std::vector<mfn::DropletResult> getDropletResults() const;
         std::vector<double> getSpeeds() const;
+        std::vector<double> getVolumes() const;
 
 
     private:

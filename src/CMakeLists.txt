@@ -15,6 +15,8 @@ set(MFN_HEADER_LIST
         "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/TemperatureReader.h"
         "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/DropletResult.h"
         "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/CsvWriter.h"
+        "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/NucleationCalculator.h"
+        "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/ThermalSimulation.h"
         "${PROJECT_SOURCE_DIR}/include/spdlog/spdlog.h"
         "${PROJECT_SOURCE_DIR}/include/toml++/toml.hpp"
 )
@@ -30,6 +32,8 @@ set(MFN_SOURCE_LIST
         TemperatureReader.cpp
         DropletResult.cpp
         AnalysisConfig.cpp
+        NucleationCalculator.cpp
+        ThermalSimulation.cpp
 )
 
 
@@ -48,10 +52,11 @@ SET(MFNGUI_SOURCE_LIST
 find_package(OpenCV REQUIRED)
 find_package(TBB REQUIRED)
 find_package(Qt5 REQUIRED COMPONENTS Widgets)
+find_package(GSL REQUIRED)
 
 add_library(microfluidic_nucleation ${MFN_SOURCE_LIST} ${MFN_HEADER_LIST})
 target_include_directories(microfluidic_nucleation PUBLIC ../include)
-target_link_libraries(microfluidic_nucleation ${OpenCV_LIBS} TBB::tbb)
+target_link_libraries(microfluidic_nucleation ${OpenCV_LIBS} TBB::tbb GSL::gsl)
 set($ENV{OPENCV_OCL4DNN_CONFIG_PATH} "")
 target_compile_features(microfluidic_nucleation PUBLIC cxx_std_23)
 
