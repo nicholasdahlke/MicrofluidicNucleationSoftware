@@ -432,3 +432,8 @@ cv::Scalar mfn::VideoAnalyzer::getRandomColor()
     const double  c3 = distribution(generator);
     return {c1, c2, c3};
 }
+
+mfn::Experiment mfn::VideoAnalyzer::getExperiment() const
+{
+    return experiment;
+}

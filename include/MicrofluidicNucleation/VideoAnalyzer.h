@@ -25,6 +25,7 @@ namespace mfn
         void analyze();
         std::vector<mfn::Frame> getFrames() const;
         std::vector<mfn::DropletResult> getDropletHeap() const;
+        mfn::Experiment getExperiment() const;
 
     private:
         typedef std::tuple<cv::Mat, int> frame_transfer_t;

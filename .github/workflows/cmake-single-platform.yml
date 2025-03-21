@@ -21,7 +21,9 @@ jobs:
 
     - name: Install Qt5
       run: sudo apt install qtbase5-dev -y
-    
+
+    - name: Install GNU Scientific Library
+      run: sudo apt install libgsl-dev -y
 
     - name: Configure CMake
       run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}

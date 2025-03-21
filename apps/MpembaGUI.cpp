@@ -14,7 +14,7 @@
 #include <MicrofluidicNucleation/CsvWriter.h>
 #include <MicrofluidicNucleation/NucleationCalculator.h>
 
-int main()
+int hhmain()
 {
     auto logger_file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("logs/log.txt", true);
     auto logger_console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
@@ -48,7 +48,7 @@ int main()
     return 0;
 }
 
-int ddmain(int argc, char **argv)
+int main(int argc, char **argv)
 {
     return mfngui::MicrofluidicNucleationGui::main(argc, argv);
 }

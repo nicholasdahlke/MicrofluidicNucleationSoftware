@@ -12,6 +12,9 @@
 #include <spdlog/sinks/qt_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <MicroCalibrator/MicroCalibrator.h>
+#include <MicrofluidicNucleation/NucleationCalculator.h>
+#include <MicrofluidicNucleation/ResultsWriter.h>
+#include <MicrofluidicNucleation/CsvWriter.h>
 #include <chrono>
 
 mfngui::MainWindow::MainWindow(QWidget *parent)
@@ -56,7 +59,7 @@ mfngui::MainWindow::MainWindow(QWidget *parent)
     }
     spdlog::get("mfn_logger")->info("Microfluidic Nucleation Counter started");
 
-    start_analysis = new QPushButton("Start Analysis");
+    start_analysis = new QPushButton("Start Pre Analysis");
     start_analysis->setEnabled(false);
 
     progress_bar = new QProgressBar();
@@ -70,6 +73,9 @@ mfngui::MainWindow::MainWindow(QWidget *parent)
 
     load_config = new QPushButton("Load Config");
 
+    save_results = new QPushButton("Save Results");
+    save_results->setEnabled(false);
+
     layout = new QGridLayout();
     layout->addWidget(open_videos, 0, 0, 2, 1);
     layout->addWidget(calibrate, 0, 1, 1, 1);
@@ -78,7 +84,8 @@ mfngui::MainWindow::MainWindow(QWidget *parent)
     layout->addWidget(table_widget, 2, 0, 1, 3);
     layout->addWidget(process_log, 4, 0, 3, 3);
     layout->addWidget(start_analysis, 3, 0, 1, 1);
-    layout->addWidget(progress_bar, 3, 1, 1, 2);
+    layout->addWidget(save_results, 3, 1, 1, 1);
+    layout->addWidget(progress_bar, 3, 2, 1, 1);
     setLayout(layout);
 
     analysis_watcher = new QFutureWatcher<void>();
@@ -91,6 +98,7 @@ mfngui::MainWindow::MainWindow(QWidget *parent)
     connect(calibrate, &QPushButton::clicked, this, &MainWindow::calibrateSlot);
     connect(calibration_watcher, &QFutureWatcher<double>::finished, this, &MainWindow::isCalibratedSlot);
     connect(load_config, &QPushButton::clicked, this, &MainWindow::loadConfigSlot);
+    connect(save_results, &QPushButton::clicked, this, &MainWindow::saveResultsSlot);
 }
 
 void mfngui::MainWindow::openVideosSlot()
@@ -175,7 +183,10 @@ void mfngui::MainWindow::startNextComputationSlot()
         video_results.push_back(analyzer);
     }
     else
+    {
         start_analysis->setEnabled(true);
+        save_results->setEnabled(true);
+    }
 }
 
 void mfngui::MainWindow::scrollLogSlot() const
@@ -249,4 +260,32 @@ void mfngui::MainWindow::loadConfigSlot()
         analysis_config = mfn::AnalysisConfig(file_name.toStdString());
     else
         spdlog::get("mfn_logger")->error("Error opening config file");
+}
+
+void mfngui::MainWindow::saveResultsSlot()
+{
+    for (const std::shared_ptr<mfn::VideoAnalyzer>& video : video_results)
+    {
+        auto writer = mfn::ResultsWriter(*video, video->getExperiment());
+        std::filesystem::path video_file = video->getExperiment().getVideo();
+
+        std::filesystem::path volume_file = video_file.parent_path().string() + "/" + video_file.stem().string() + "-volumes.csv";
+        std::filesystem::path speed_file = video_file.parent_path().string() + "/" + video_file.stem().string() + "-speeds.csv";
+
+        std::vector<std::vector<double>> speed_vectors;
+        std::vector<std::vector<double>> volume_vectors;
+
+        std::vector<double> speed_result = writer.getSpeeds();
+        std::vector<double> volume_result = writer.getVolumes();
+        for (const double& speed : speed_result)
+            speed_vectors.push_back({speed});
+
+        for (const double& volume : volume_result)
+            volume_vectors.push_back({volume});
+
+        mfn::CsvWriter::writeToCsvFile(speed_vectors, speed_file);
+        mfn::CsvWriter::writeToCsvFile(volume_vectors, volume_file);
+
+        spdlog::get("mfn_logger")->info("Analysis results saved for {}", video_file.stem().string());
+    }
 }

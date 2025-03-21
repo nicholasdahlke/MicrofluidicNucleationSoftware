@@ -11,7 +11,7 @@
 #include <QFutureWatcher>
 #include <QLabel>
 #include <QProgressBar>
-#include "MicrofluidicNucleation/VideoAnalyzer.h"
+#include <MicrofluidicNucleation/VideoAnalyzer.h>
 #include <MicrofluidicNucleation/Experiment.h>
 #include <MicrofluidicNucleation/TemperatureReader.h>
 #include <queue>
@@ -40,6 +40,7 @@ namespace mfngui
             QTextEdit *process_log;
             QLabel *calib_constant;
             QProgressBar *progress_bar;
+            QPushButton *save_results;
 
             double calib_value = 0;
 
@@ -53,6 +54,7 @@ namespace mfngui
         private slots:
             void openVideosSlot();
             void startAnalysisSlot();
+            void saveResultsSlot();
             void scrollLogSlot() const;
             void startNextComputationSlot();
             void calibrateSlot();
