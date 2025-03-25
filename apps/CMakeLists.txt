@@ -1,4 +1,7 @@
 add_executable(MicrofluidicNucleationApp MpembaGUI.cpp)
 target_compile_features(MicrofluidicNucleationApp PRIVATE cxx_std_23)
-
 target_link_libraries(MicrofluidicNucleationApp PRIVATE microfluidic_nucleation microfluidic_nucleation_gui)
+
+add_executable(MpembaPostEval MpembaPostEval.cpp)
+target_compile_features(MpembaPostEval PRIVATE cxx_std_23)
+target_link_libraries(MpembaPostEval PRIVATE microfluidic_nucleation)

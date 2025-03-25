@@ -14,7 +14,7 @@
 #include <MicroCalibrator/MicroCalibrator.h>
 #include <MicrofluidicNucleation/NucleationCalculator.h>
 #include <MicrofluidicNucleation/ResultsWriter.h>
-#include <MicrofluidicNucleation/CsvWriter.h>
+#include <MicrofluidicNucleation/CSV.h>
 #include <chrono>
 
 mfngui::MainWindow::MainWindow(QWidget *parent)
@@ -271,6 +271,7 @@ void mfngui::MainWindow::saveResultsSlot()
 
         std::filesystem::path volume_file = video_file.parent_path().string() + "/" + video_file.stem().string() + "-volumes.csv";
         std::filesystem::path speed_file = video_file.parent_path().string() + "/" + video_file.stem().string() + "-speeds.csv";
+        std::filesystem::path droplets_file = video_file.parent_path().string() + "/" + video_file.stem().string() + "-droplets.csv";
 
         std::vector<std::vector<double>> speed_vectors;
         std::vector<std::vector<double>> volume_vectors;
@@ -283,8 +284,9 @@ void mfngui::MainWindow::saveResultsSlot()
         for (const double& volume : volume_result)
             volume_vectors.push_back({volume});
 
-        mfn::CsvWriter::writeToCsvFile(speed_vectors, speed_file);
-        mfn::CsvWriter::writeToCsvFile(volume_vectors, volume_file);
+        mfn::CSV::write(speed_vectors, speed_file);
+        mfn::CSV::write(volume_vectors, volume_file);
+        mfn::CSV::write(writer.getDropletResults(), droplets_file);
 
         spdlog::get("mfn_logger")->info("Analysis results saved for {}", video_file.stem().string());
     }

@@ -243,8 +243,8 @@ void mfn::VideoAnalyzer::detectContour(mfn::Frame &frame, std::filesystem::path 
                 p[2] = 0;
                 cv::LUT(outMask, lookUpTable, outMask);
 
-                cv::resize(outMask, outMask, cv::Size(0, 0), 1/down_factor, 1/down_factor);
-                cv::resize(droplet_image, droplet_image, cv::Size(0, 0), 1/down_factor, 1/down_factor);
+                cv::resize(outMask, outMask, cv::Size(0, 0), 1.0/down_factor, 1.0/down_factor);
+                cv::resize(droplet_image, droplet_image, cv::Size(0, 0), 1.0/down_factor, 1.0/down_factor);
                 std::vector<std::vector<cv::Point> > contours;
                 cv::findContours(outMask, contours, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE, cv::Point(0, 0));
                 if (!contours.empty())

@@ -2,6 +2,7 @@
 #include "MicrofluidicNucleation/Droplet.h"
 #include <numbers>
 #include "spdlog/spdlog.h"
+#include <cmath>
 
 //
 // Created by nicholas on 23.02.25.
@@ -83,6 +84,9 @@ double mfn::Droplet::getVolume() const
         return 0.0;
     }
 
-    return std::numbers::pi * ellipse.size.height * ellipse.size.width;
+    double c = std::max(ellipse.size.width, ellipse.size.height) * 0.5;
+    double a = std::min(ellipse.size.height, ellipse.size.width) * 0.5;
+
+    return (4.0/3.0) * std::numbers::pi * pow(a, 2) * c;
 
 }

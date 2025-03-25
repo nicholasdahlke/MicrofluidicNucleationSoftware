@@ -16,13 +16,22 @@ namespace mfn
     class NucleationCalculator
     {
     public:
-        explicit NucleationCalculator(
+        NucleationCalculator(
             std::vector<mfn::DropletResult> _droplet_results,
             mfn::AnalysisConfig _analysis_config,
             std::vector<double> _droplet_speeds,
             std::vector<double> _droplet_volumes,
             Experiment _experiment
             );
+
+        NucleationCalculator(
+            std::filesystem::path _droplet_path,
+            mfn::AnalysisConfig _analysis_config,
+            std::filesystem::path _speed_path,
+            std::filesystem::path _volume_path,
+            Experiment _experiment);
+
+        double getNucleationRate();
 
 
     private:

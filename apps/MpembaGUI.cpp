@@ -11,7 +11,7 @@
 #include <MicrofluidicNucleation/ResultsWriter.h>
 #include <MicrofluidicNucleation/TemperatureReader.h>
 #include <MicrofluidicNucleationGui/MicrofluidicNucleationGui.h>
-#include <MicrofluidicNucleation/CsvWriter.h>
+#include <MicrofluidicNucleation/CSV.h>
 #include <MicrofluidicNucleation/NucleationCalculator.h>
 
 int hhmain()
@@ -37,7 +37,7 @@ int hhmain()
     std::vector<std::vector<double>> speeds_vector;
     for (double speed : writer.getSpeeds())
         speeds_vector.emplace_back(speed);
-    mfn::CsvWriter::writeToCsvFile(speeds_vector, "out.csv");
+    mfn::CSV::write(speeds_vector, "out.csv");
     std::vector<mfn::DropletResult> results = writer.getDropletResults();
     //mfn::NucleationCalculator calculator(results, config, writer.getSpeeds(), writer.getVolumes());
     //std::tuple<int, int> droplet_count = calculator.countDroplets();

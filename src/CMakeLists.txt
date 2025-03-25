@@ -14,7 +14,7 @@ set(MFN_HEADER_LIST
         "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/ResultsWriter.h"
         "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/TemperatureReader.h"
         "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/DropletResult.h"
-        "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/CsvWriter.h"
+        "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/CSV.h"
         "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/NucleationCalculator.h"
         "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleation/ThermalSimulation.h"
         "${PROJECT_SOURCE_DIR}/include/spdlog/spdlog.h"

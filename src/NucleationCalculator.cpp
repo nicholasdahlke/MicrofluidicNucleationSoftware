@@ -5,8 +5,11 @@
 #include <MicrofluidicNucleation/NucleationCalculator.h>
 #include <MicrofluidicNucleation/ThermalSimulation.h>
 #include <MicrofluidicNucleation/Experiment.h>
+#include <MicrofluidicNucleation/CSV.h>
 #include <gsl/gsl_statistics_double.h>
 #include <spdlog/spdlog.h>
+#include <string>
+#include <MicrofluidicNucleation/CSV.h>
 
 mfn::NucleationCalculator::NucleationCalculator(
     std::vector<mfn::DropletResult> _droplet_results,
@@ -22,6 +25,39 @@ mfn::NucleationCalculator::NucleationCalculator(
     dropletVolumes = _droplet_volumes;
     experiment = _experiment;
 }
+
+mfn::NucleationCalculator::NucleationCalculator(
+    std::filesystem::path _droplet_path,
+    mfn::AnalysisConfig _analysis_config,
+    std::filesystem::path _speed_path,
+    std::filesystem::path _volume_path,
+    Experiment _experiment
+    )
+{
+    analysisConfig = _analysis_config;
+    experiment = _experiment;
+
+    std::vector<std::vector<std::string>> speeds = mfn::CSV::read(_speed_path);
+    for (const std::vector<std::string>& speed : speeds)
+        dropletSpeeds.push_back(stod(speed[0]));
+
+    std::vector<std::vector<std::string>> volumes = mfn::CSV::read(_volume_path);
+    for (const std::vector<std::string>& volume : volumes)
+        dropletVolumes.push_back(stod(volume.at(0)));
+
+    std::vector<std::vector<std::string>> droplets = mfn::CSV::read(_droplet_path);
+    for (const std::vector<std::string>& droplet : droplets)
+    {
+        dropletResults.emplace_back(
+            stod(droplet[0]),
+            droplet[1] == "1",
+            stod(droplet[2]),
+            stod(droplet[3]),
+            droplet[4] == "1"
+            );
+    }
+}
+
 
 double mfn::NucleationCalculator::getDropletVolume()
 {
@@ -63,17 +99,19 @@ double mfn::NucleationCalculator::getNucleationRate(
     ThermalSimulation::dgl_parameters sim_parameters = {1e5, 1e-4};
     simulation.simulate(sim_parameters, temp);
     std::vector<std::tuple<double, double>> results = simulation.getResults();
+    mfn::CSV::write(results, "/home/nicholas/testvideo/thermal.csv");
     double t = getCoolTime(results, temp);
-    return -1.0 * (1.0 / (t * v)) * log(std::get<LIQUID>(droplet_count)/(std::get<LIQUID>(droplet_count) + std::get<FROZEN>(droplet_count)));
+    double n_u = std::get<LIQUID>(droplet_count);
+    double n_0 = std::get<LIQUID>(droplet_count) + std::get<FROZEN>(droplet_count);
+    return -1.0 * (1.0 / (t * v)) * log(n_u / n_0);
 }
 
 double mfn::NucleationCalculator::getCoolTime(std::vector<std::tuple<double, double> > results, double temp)
 {
     double cutoff_temp = temp + 7.0; // TODO: Read from config file
+    double cutoff_time = std::get<0>(*std::ranges::min_element(results, [cutoff_temp](const std::tuple<double, double> &a, const std::tuple<double, double> &b) {return std::abs(cutoff_temp - std::get<1>(a)) < std::abs(cutoff_temp - std::get<1>(b));})); // Closest element to the temperature cutoff
 
-    double cutoff_time = std::get<0>(*std::ranges::min_element(results, [temp](const std::tuple<double, double> &a, const std::tuple<double, double> &b) {return std::abs(temp - std::get<1>(a)) < std::abs(temp - std::get<1>(b));})); // Closest element to the temperature cutoff
-
-    double cooler_exit_time = experiment.getParameters()["cooler_length"] * getDropletSpeed(); // Time when the droplet has left the cooler
+    double cooler_exit_time = experiment.getParameters()["cooler_length"] / getDropletSpeed(); // Time when the droplet has left the cooler
 
     double threshold = 0.5;
     double temp_reached_time = std::get<0>(*std::ranges::find_if(results, [=](const auto& tup) {
@@ -83,4 +121,7 @@ double mfn::NucleationCalculator::getCoolTime(std::vector<std::tuple<double, dou
     return cooler_exit_time - cutoff_time;
 }
 
-
+double mfn::NucleationCalculator::getNucleationRate()
+{
+    return getNucleationRate(dropletResults.begin(), dropletResults.end(), dropletResults.front().temperature_c);
+}
