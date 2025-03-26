@@ -10,6 +10,7 @@
 #include <string>
 #include <ranges>
 #include <MicrofluidicNucleation/DropletResult.h>
+#include <MicrofluidicNucleation/Experiment.h>
 
 namespace mfn
 {
@@ -27,7 +28,7 @@ namespace mfn
 
       template <typename T>
       static void write(std::vector<std::vector<T>> _vec,
-         const std::vector<std::string> _column_names,
+         const std::vector<std::string>& _column_names,
          const std::filesystem::path& _filename)
       {
          if (_column_names.size() != _vec.front().size())
@@ -39,7 +40,7 @@ namespace mfn
          outfile.close();
       }
 
-      static void write(std::vector<mfn::DropletResult> _vec, const std::filesystem::path& _filename)
+      static void write(const std::vector<mfn::DropletResult>& _vec, const std::filesystem::path& _filename)
       {
          std::ofstream outfile(_filename);
          std::vector<std::string> column_names = {"volume", "frozen", "time", "temperature", "has_volume"};
@@ -58,7 +59,7 @@ namespace mfn
          write(output, column_names, _filename);
       }
 
-      static void write(std::vector<std::tuple<double, double>> _vec, const std::filesystem::path& _filename)
+      static void write(const std::vector<std::tuple<double, double>>& _vec, const std::filesystem::path& _filename)
       {
          std::ofstream outfile(_filename);
          for (const std::tuple<double, double>& row : _vec)
@@ -66,7 +67,7 @@ namespace mfn
          outfile.close();
       }
 
-      static std::vector<std::vector<std::string>> read(const std::filesystem::path& _filename, bool skip_header=true, std::string delimiter=";")
+      static std::vector<std::vector<std::string>> read(const std::filesystem::path& _filename, bool skip_header=false, std::string delimiter=";")
       {
          std::ifstream infile(_filename);
 

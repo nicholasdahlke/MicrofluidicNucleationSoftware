@@ -10,6 +10,7 @@
 #include <spdlog/spdlog.h>
 #include <string>
 #include <MicrofluidicNucleation/CSV.h>
+#include <toml++/toml.hpp>
 
 mfn::NucleationCalculator::NucleationCalculator(
     std::vector<mfn::DropletResult> _droplet_results,
@@ -26,16 +27,56 @@ mfn::NucleationCalculator::NucleationCalculator(
     experiment = _experiment;
 }
 
+mfn::NucleationCalculator::NucleationCalculator(std::filesystem::path _case_path, mfn::AnalysisConfig _analysis_config)
+{
+    toml::table table;
+    try
+    {
+        table = toml::parse_file(_case_path.string());
+    }
+    catch (...)
+    {
+        spdlog::get("mfn_logger")->error("Failed to parse config file {}", _case_path.string());
+    }
+
+    std::optional<std::string> droplet_path = table["droplets"].value<std::string>();
+    std::optional<std::string> exp_path = table["experiment"].value<std::string>();
+    std::optional<std::string> speeds_path = table["speeds"].value<std::string>();
+    std::optional<std::string> volume_path = table["volumes"].value<std::string>();
+
+
+
+    analysisConfig = _analysis_config;
+    if (droplet_path.has_value() && exp_path.has_value() && speeds_path.has_value() && volume_path.has_value())
+    {
+        initFromFiles(
+            droplet_path.value(),
+            speeds_path.value(),
+            volume_path.value(),
+            exp_path.value());
+    }
+
+}
+
 mfn::NucleationCalculator::NucleationCalculator(
     std::filesystem::path _droplet_path,
     mfn::AnalysisConfig _analysis_config,
     std::filesystem::path _speed_path,
     std::filesystem::path _volume_path,
-    Experiment _experiment
+    std::filesystem::path _experiment_path
     )
 {
     analysisConfig = _analysis_config;
-    experiment = _experiment;
+    initFromFiles(_droplet_path, _speed_path, _volume_path, _experiment_path);
+}
+
+void mfn::NucleationCalculator::initFromFiles(
+    std::filesystem::path _droplet_path,
+    std::filesystem::path _speed_path,
+    std::filesystem::path _volume_path,
+    std::filesystem::path _experiment_path)
+{
+    experiment = mfn::Experiment(_experiment_path);
 
     std::vector<std::vector<std::string>> speeds = mfn::CSV::read(_speed_path);
     for (const std::vector<std::string>& speed : speeds)
@@ -45,7 +86,7 @@ mfn::NucleationCalculator::NucleationCalculator(
     for (const std::vector<std::string>& volume : volumes)
         dropletVolumes.push_back(stod(volume.at(0)));
 
-    std::vector<std::vector<std::string>> droplets = mfn::CSV::read(_droplet_path);
+    std::vector<std::vector<std::string>> droplets = mfn::CSV::read(_droplet_path, true);
     for (const std::vector<std::string>& droplet : droplets)
     {
         dropletResults.emplace_back(
@@ -57,6 +98,7 @@ mfn::NucleationCalculator::NucleationCalculator(
             );
     }
 }
+
 
 
 double mfn::NucleationCalculator::getDropletVolume()

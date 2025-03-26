@@ -29,12 +29,23 @@ namespace mfn
             mfn::AnalysisConfig _analysis_config,
             std::filesystem::path _speed_path,
             std::filesystem::path _volume_path,
-            Experiment _experiment);
+            std::filesystem::path _experiment_path);
+
+        NucleationCalculator(
+            std::filesystem::path _case_path,
+            mfn::AnalysisConfig _analysis_config
+            );
 
         double getNucleationRate();
 
 
     private:
+        void initFromFiles(
+            std::filesystem::path _droplet_path,
+            std::filesystem::path _speed_path,
+            std::filesystem::path _volume_path,
+            std::filesystem::path _experiment_path);
+
         enum
         {
             FROZEN = 0,

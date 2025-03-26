@@ -90,3 +90,8 @@ double mfn::Droplet::getVolume() const
     return (4.0/3.0) * std::numbers::pi * pow(a, 2) * c;
 
 }
+
+void mfn::Droplet::clearDropletImage()
+{
+    droplet_image.release();
+}

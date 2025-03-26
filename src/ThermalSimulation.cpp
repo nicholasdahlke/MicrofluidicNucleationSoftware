@@ -15,7 +15,7 @@ void mfn::ThermalSimulation::simulate(dgl_parameters parameters, double end_temp
     int iterations = 0;
 
     results.clear();
-    results.push_back(std::make_tuple(0, experiment.getHeaterTemperature()));
+    results.emplace_back(0, experiment.getParameter("heater_temperature"));
 
     double k = experiment.getParameters()["thermal_conductivity_tubing"];
     double r_A = experiment.getParameters()["outer_radius_tubing"];

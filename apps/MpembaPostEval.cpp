@@ -16,14 +16,11 @@ int main()
     spdlog::register_logger(logger);
     spdlog::get("mfn_logger")->info("Microfluidic Nucleation Evaluation started");
 
-    std::string droplet_path = "/home/nicholas/testvideo/700Ul Oel; 10Ul Wasser; 30 Warm; -39 Kalt; 47,8196 Framerate-11222024174140-0000-droplets.csv";
-    std::string speed_path = "/home/nicholas/testvideo/700Ul Oel; 10Ul Wasser; 30 Warm; -39 Kalt; 47,8196 Framerate-11222024174140-0000-speeds.csv";
-    std::string volume_path = "/home/nicholas/testvideo/700Ul Oel; 10Ul Wasser; 30 Warm; -39 Kalt; 47,8196 Framerate-11222024174140-0000-volumes.csv";
-
     std::string config_path = "/mnt/md0/Progammiersoftwareprojekte/CLionProjects/MicrofluidicNucleationSoftware/examples/analysis_config.cf";
     mfn::AnalysisConfig config(config_path);
-    mfn::Experiment experiment("", 47.8196, 1, 30);
-    mfn::NucleationCalculator calculator(droplet_path, config, speed_path, volume_path, experiment);
+
+    std::string case_path = "/home/nicholas/testvideo/700Ul Oel; 10Ul Wasser; 30 Warm; -39 Kalt; 47,8196 Framerate-11222024174140-0000-case.cf";
+    mfn::NucleationCalculator calculator(case_path, config);
     spdlog::get("mfn_logger")->info("Microfluidic Nucleation Evaluation completed, nucleation rate is {}", calculator.getNucleationRate());
 
     return 0;

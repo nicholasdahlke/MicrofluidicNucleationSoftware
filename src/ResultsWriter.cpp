@@ -20,7 +20,7 @@ std::vector<mfn::DropletResult> mfn::ResultsWriter::getDropletResults() const
     {
         for (const Droplet& droplet : frame.droplets)
         {
-            results.emplace_back(droplet.getVolume()*pow(experiment.getCalibration(), 3), droplet.isFrozen(), frame.getTime(), frame.getTemperature(), !droplet.getIgnore());
+            results.emplace_back(droplet.getVolume()*pow(experiment.getParameter("calibration"), 3), droplet.isFrozen(), frame.getTime(), frame.getTemperature(), !droplet.getIgnore());
         }
     }
     return results;
@@ -34,9 +34,10 @@ std::vector<double> mfn::ResultsWriter::getSpeeds() const
         for (const Droplet & droplet : frame.droplets)
         {
             Vector2D movement = droplet.getMovement();
-            movement.content[0] *= experiment.getCalibration();
-            movement.content[1] *= experiment.getCalibration();
-            speeds.push_back(movement.get_length()*experiment.getFrameRate());
+            double calibration = experiment.getParameter("calibration");
+            movement.content[0] *= calibration;
+            movement.content[1] *= calibration;
+            speeds.push_back(movement.get_length()*experiment.getParameter("frame_rate"));
         }
     }
     return speeds;
@@ -48,7 +49,7 @@ std::vector<double> mfn::ResultsWriter::getVolumes() const
     for (const DropletResult & droplet : videoAnalyzer.getDropletHeap())
     {
         if (droplet.has_volume)
-            volumes.push_back(droplet.droplet_volume * pow(experiment.getCalibration(), 3));
+            volumes.push_back(droplet.droplet_volume * pow(experiment.getParameter("calibration"), 3));
     }
     return volumes;
 }

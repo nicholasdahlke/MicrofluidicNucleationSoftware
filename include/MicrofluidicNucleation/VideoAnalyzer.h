@@ -35,7 +35,7 @@ namespace mfn
         cv::VideoCapture video_capture;
 
         std::vector<mfn::Frame> frames;
-        YoloV5 yolo;
+        std::shared_ptr<YoloV5> yolo{};
 
         cv::Size frame_size;
         std::filesystem::path volume_images_path;

@@ -16,6 +16,8 @@
 #include <MicrofluidicNucleation/ResultsWriter.h>
 #include <MicrofluidicNucleation/CSV.h>
 #include <chrono>
+#include <fstream>
+#include <toml++/toml.hpp>
 
 mfngui::MainWindow::MainWindow(QWidget *parent)
 {
@@ -269,24 +271,37 @@ void mfngui::MainWindow::saveResultsSlot()
         auto writer = mfn::ResultsWriter(*video, video->getExperiment());
         std::filesystem::path video_file = video->getExperiment().getVideo();
 
+        std::filesystem::path experiment_file = video_file.parent_path().string() + "/" + video_file.stem().string() + "-experiment.cf";
+        video->getExperiment().writeToFile(experiment_file);
+
         std::filesystem::path volume_file = video_file.parent_path().string() + "/" + video_file.stem().string() + "-volumes.csv";
-        std::filesystem::path speed_file = video_file.parent_path().string() + "/" + video_file.stem().string() + "-speeds.csv";
-        std::filesystem::path droplets_file = video_file.parent_path().string() + "/" + video_file.stem().string() + "-droplets.csv";
-
-        std::vector<std::vector<double>> speed_vectors;
         std::vector<std::vector<double>> volume_vectors;
-
-        std::vector<double> speed_result = writer.getSpeeds();
         std::vector<double> volume_result = writer.getVolumes();
-        for (const double& speed : speed_result)
-            speed_vectors.push_back({speed});
-
         for (const double& volume : volume_result)
             volume_vectors.push_back({volume});
-
-        mfn::CSV::write(speed_vectors, speed_file);
         mfn::CSV::write(volume_vectors, volume_file);
+
+        std::filesystem::path speed_file = video_file.parent_path().string() + "/" + video_file.stem().string() + "-speeds.csv";
+        std::vector<std::vector<double>> speed_vectors;
+        std::vector<double> speed_result = writer.getSpeeds();
+        for (const double& speed : speed_result)
+            speed_vectors.push_back({speed});
+        mfn::CSV::write(speed_vectors, speed_file);
+
+
+        std::filesystem::path droplets_file = video_file.parent_path().string() + "/" + video_file.stem().string() + "-droplets.csv";
         mfn::CSV::write(writer.getDropletResults(), droplets_file);
+
+        std::filesystem::path case_file = video_file.parent_path().string() + "/" + video_file.stem().string() + "-case.cf";
+        auto file_table = toml::table{
+            {"experiment", experiment_file.string()},
+            {"volumes", volume_file.string()},
+            {"speeds", speed_file.string()},
+            {"droplets", droplets_file.string()}
+        };
+        std::ofstream case_file_ofstream(case_file, std::ios::out);
+        case_file_ofstream << file_table;
+        case_file_ofstream.close();
 
         spdlog::get("mfn_logger")->info("Analysis results saved for {}", video_file.stem().string());
     }

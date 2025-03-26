@@ -55,6 +55,8 @@ namespace mfn
 
         void setDropletImage(const cv::Mat &dropletImage);
 
+        void clearDropletImage();
+
     };
 }
 #endif //MICROFLUIDICNUCLEATIONSOFTWARE_RAWDROPLET_H

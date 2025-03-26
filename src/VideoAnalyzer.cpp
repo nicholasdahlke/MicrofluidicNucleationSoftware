@@ -19,7 +19,8 @@ mfn::VideoAnalyzer::VideoAnalyzer(const mfn::Experiment &experiment, const Analy
     VideoAnalyzer::config = config;
     VideoAnalyzer::temperatureReader = temperature;
     distribution = std::uniform_int_distribution<>(50, 255);
-    yolo.open(config);
+    yolo = std::make_shared<YoloV5>(config);
+    yolo->open(config);
 }
 
 
@@ -93,8 +94,24 @@ void mfn::VideoAnalyzer::processLoop()
             frame_queue.end(),
             [&](mfn::Frame & frame){detectContour(frame, volume_images_path);}
         );
+
+        //Delete the droplet images
+        /*spdlog::get("mfn_logger")->info("Deleting droplet images");
+        std::for_each(
+            std::execution::par,
+            frame_queue.begin(),
+            frame_queue.end(),
+            [&](mfn::Frame & frame) {
+                std::for_each(
+                    std::execution::par,
+                    frame.droplets.begin(),
+                    frame.droplets.end(),
+                    [&](mfn::Droplet & droplet) {droplet.clearDropletImage();});
+            });*/
+
         frames.insert(frames.end(), frame_queue.begin(), frame_queue.end());
         spdlog::get("mfn_logger")->info("Preprocessing queue finished");
+
     }
     spdlog::get("mfn_logger")->info("Preprocessing loop finished");
 
@@ -126,8 +143,8 @@ void mfn::VideoAnalyzer::processLoop()
         [&](mfn::Frame & frame) {writeTemperature(frame, temperatureReader);}
         );
 
-
-    //showDisplacement(frames);
+    // Delete the yolo object, as it consumes too much memory
+    yolo.reset();
     const std::chrono::duration<double> diff = std::chrono::high_resolution_clock::now() - begin;
     spdlog::get("mfn_logger")->info("Processing loop done in {:.2f}min.", diff.count()/60.0f);
 }
@@ -146,10 +163,10 @@ std::vector<mfn::Frame> mfn::VideoAnalyzer::detectDroplets(const std::vector<fra
         frame_mats.push_back(std::get<0>(frame));
 
     std::vector<mfn::Frame> frames_detected;
-    std::vector<std::vector<mfn::Detection>> detections = yolo.process(frame_mats);
+    std::vector<std::vector<mfn::Detection>> detections = yolo->process(frame_mats);
     for (size_t i = 0; i < detections.size(); i++)
     {
-        Frame frame(static_cast<double>((std::get<1>(input[i])) / experiment.getFrameRate())*1000);
+        Frame frame(static_cast<double>((std::get<1>(input[i])) / experiment.getParameter("frame_rate"))*1000);
         for (const mfn::Detection & detection : detections[i])
         {
             mfn::Droplet droplet(detection);

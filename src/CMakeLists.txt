@@ -41,7 +41,7 @@ set(MFNGUI_HEADER_LIST
         "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleationGui/MicrofluidicNucleationGui.h"
         "${PROJECT_SOURCE_DIR}/include/MicrofluidicNucleationGui/MainWindow.h"
         "${PROJECT_SOURCE_DIR}/include/spdlog/spdlog.h"
-
+        "${PROJECT_SOURCE_DIR}/include/toml++/toml.hpp"
 )
 SET(MFNGUI_SOURCE_LIST
         MicrofluidicNucleationGui.cpp
