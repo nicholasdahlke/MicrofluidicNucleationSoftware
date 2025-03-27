@@ -9,9 +9,11 @@
 - add `C:\opencv\build\x64\vc16\bin` to the `PATH` enviroment variable
 - create a `.cache` directory, in the directory where the executabe resides (necessary for the OPENCV OpenCL DNN backend)
 - add `-DCMAKE_PREFIX_PATH=C:\OpenCV\build` to the CMake options in CLion (general setting not configurations)
+- QT and GSL are missing here, they also need to be installed
 
 ## Linux
 - Install the `mesa-opencl-icd` package
+- Install `libgsl-dev` and `qtbase-dev`
 
 ## Converting the dynamic input shape model to fixed 
 > At the moment this doesn't work, as it messes up the neural network shape.
