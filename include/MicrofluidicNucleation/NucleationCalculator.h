@@ -8,6 +8,7 @@
 #include <MicrofluidicNucleation/AnalysisConfig.h>
 #include <vector>
 #include <tuple>
+#include <utility>
 
 #include "Experiment.h"
 
@@ -37,6 +38,7 @@ namespace mfn
             );
 
         double getNucleationRate();
+        std::vector<std::tuple<double, double>> getNucleationRateBinned(int bins);
 
 
     private:
@@ -73,9 +75,26 @@ namespace mfn
             double temp
             );
 
+        std::vector<std::tuple<double, double>> getNucleationRateBinned(
+            std::vector<mfn::DropletResult>::const_iterator first,
+            std::vector<mfn::DropletResult>::const_iterator last,
+            double start_temp,
+            double end_temp,
+            int bins
+            );
+
         double getCoolTime(std::vector<std::tuple<double, double>> results, double temp);
 
+        std::pair<std::vector<mfn::DropletResult>::const_iterator, std::vector<mfn::DropletResult>::const_iterator> getBinIteratorPair(
+            std::vector<mfn::DropletResult>::const_iterator first,
+            std::vector<mfn::DropletResult>::const_iterator last,
+            int bin,
+            double start_temp,
+            double end_temp,
+            int bins
+            );
 
+        static double getBinCenterTemp(int bin, double start_temp, double end_temp, int bins);
 
     };
 }

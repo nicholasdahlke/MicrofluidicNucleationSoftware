@@ -167,3 +167,55 @@ double mfn::NucleationCalculator::getNucleationRate()
 {
     return getNucleationRate(dropletResults.begin(), dropletResults.end(), dropletResults.front().temperature_c);
 }
+
+std::vector<std::tuple<double, double>> mfn::NucleationCalculator::getNucleationRateBinned(
+    const std::vector<mfn::DropletResult>::const_iterator first,
+    const std::vector<mfn::DropletResult>::const_iterator last,
+    const double start_temp,
+    const double end_temp,
+    const int bins)
+{
+    std::vector<std::tuple<double, double>> results;  // Bin center temp is first, Bin nucleation rate second
+    results.reserve(bins);
+
+    for (int i = 0; i < bins - 1; i++)
+    {
+        std::pair<std::vector<mfn::DropletResult>::const_iterator, std::vector<mfn::DropletResult>::const_iterator> it_pair = getBinIteratorPair(first, last, i, start_temp, end_temp, bins);
+        double temp = getBinCenterTemp(i, start_temp, end_temp, bins);
+        double nucleation_rate = getNucleationRate(it_pair.first, it_pair.second, temp);
+        results.emplace_back(temp, nucleation_rate);
+    }
+    return results;
+}
+
+std::vector<std::tuple<double, double>> mfn::NucleationCalculator::getNucleationRateBinned(int bins)
+{
+    double start_temp = dropletResults.front().temperature_c;
+    double end_temp = dropletResults.back().temperature_c;
+    return getNucleationRateBinned(dropletResults.begin(), dropletResults.end(), start_temp, end_temp, bins);
+}
+
+std::pair<std::vector<mfn::DropletResult>::const_iterator, std::vector<mfn::DropletResult>::const_iterator> mfn::NucleationCalculator::getBinIteratorPair(
+    const std::vector<mfn::DropletResult>::const_iterator first,
+    const std::vector<mfn::DropletResult>::const_iterator last,
+    const int bin,
+    const double start_temp,
+    const double end_temp,
+    const int bins)
+{
+    // For this function to work, the results need to be sorted by temperature. This should THEORETICALLY always be the case.
+    // The first bin, is bin 0
+    double bin_width = (end_temp - start_temp)/static_cast<double>(bins);
+    double bin_start_temp = start_temp + bin_width * static_cast<double>(bin);
+    double bin_end_temp = bin_start_temp + bin_width;
+
+    auto start_it = std::min_element(first, last, [&](const auto& a, const auto& b) {return std::abs(a.temperature_c - bin_start_temp) < std::abs(b.temperature_c - bin_start_temp);});
+    auto end_it = std::min_element(first, last, [&](const auto& a, const auto&b ) {return std::abs(a.temperature_c - bin_end_temp) < std::abs(b.temperature_c - bin_end_temp);});
+
+    return std::make_pair(start_it, end_it);
+}
+
+double mfn::NucleationCalculator::getBinCenterTemp(int bin, double start_temp, double end_temp, int bins)
+{
+    return start_temp + ((end_temp - start_temp)/static_cast<double>(bins)) * (static_cast<double>(bin) + 0.5);
+}

@@ -279,7 +279,8 @@ void mfn::VideoAnalyzer::detectContour(mfn::Frame &frame, std::filesystem::path 
                         double ellipse_area = std::numbers::pi * ellipse_fit.size.width * ellipse_fit.size.height;
                         double error = abs(ellipse_area - cv::contourArea(contour));
                         spdlog::get("mfn_logger")->info("Ellipse fitted with an accuracy of {:.2}%", 100*(error/ellipse_area));
-                        cv::ellipse(droplet_image, ellipse_fit, cv::Scalar(0,0,255), 2);
+                        cv::Scalar color = droplet.isFrozen() ? cv::Scalar(255, 0, 0) : cv::Scalar(0, 0, 255);
+                        cv::ellipse(droplet_image, ellipse_fit, color, 2);
                         cv::imwrite(image_path.string() + std::to_string(frame.getTime()) + ".png", droplet_image);
                         ellipse_fit.center.x += droplet.getDetection().getRect().x;
                         ellipse_fit.center.y += droplet.getDetection().getRect().y;
