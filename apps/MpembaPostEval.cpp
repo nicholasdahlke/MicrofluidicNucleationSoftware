@@ -7,6 +7,8 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
+#include <queue>
+#include <iostream>
 
 int main()
 {
@@ -19,10 +21,26 @@ int main()
     std::string config_path = "/mnt/md0/Progammiersoftwareprojekte/CLionProjects/MicrofluidicNucleationSoftware/examples/analysis_config.cf";
     mfn::AnalysisConfig config(config_path);
 
-    std::string case_path = "/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/05.03.25/3- 700Ul Oel- 20Ul Wasser - 30 Warm- Ramp- -20 - -21 In 4 Min Danach Stable Auf -21- 22-8 Raumtemp-15-08 Messung Fertig- 47-81955 Framerate-03052025145632-0000_mirrored-case.cf";
-    mfn::NucleationCalculator calculator(case_path, config);
-    spdlog::get("mfn_logger")->info("Microfluidic Nucleation Evaluation completed, nucleation rate is {}", calculator.getNucleationRate());
+    std::filesystem::path mpemba_directory = "/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/05.03.25/";
+    std::queue<std::filesystem::path> case_queue;
+    for (auto const& dir_entry: std::filesystem::directory_iterator(mpemba_directory))
+    {
+        if(dir_entry.path().string().ends_with("-case.cf"))
+            case_queue.push(dir_entry.path());
+    }
 
-    mfn::CSV::write(calculator.getNucleationRateBinned(4), "/home/nicholas/results2.csv");
+    while(!case_queue.empty())
+    {
+        std::filesystem::path path = case_queue.front();
+        case_queue.pop();
+        mfn::NucleationCalculator calculator(path, config);
+        std::filesystem::path bin_result_file = path.parent_path().string() + "/" + path.stem().string() + "-bin-results.csv";
+        spdlog::get("mfn_logger")->info("Analyzing {}", path.string());
+        int bins;
+        std::cin >> bins;
+        mfn::CSV::write(calculator.getNucleationRateBinned(bins), bin_result_file);
+    }
+
+
     return 0;
 }

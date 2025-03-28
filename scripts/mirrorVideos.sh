@@ -6,6 +6,7 @@ if [ "$#" -eq 0 ]; then
     exit 1
 fi
 
+
 # Loop through each file provided as an argument
 for input_file in "$@"; do
     # Check if file exists
@@ -14,13 +15,16 @@ for input_file in "$@"; do
         continue
     fi
 
-    # Extract filename without extension and extension
-    filename="${input_file%.*}"
-    extension="${input_file##*.}"
-    output_file="${filename}_mirrored.${extension}"
+	# Create folder for the old videos
+	folder=$(dirname -- "$input_file")
+	mkdir "$folder/old_videos" -v
+	mv "$input_file" "$folder/old_videos"
+
+	filename=$(basename -- "$input_file")
+	file="$folder/old_videos/$filename"
 
     # Apply horizontal mirroring using ffmpeg
-    ffmpeg -i "$input_file" -vf hflip -c:a copy "$output_file"
+    ffmpeg -i "$file" -vf hflip -c:a copy "$input_file"
 
-    echo "Mirrored video saved as: $output_file"
+    echo "Mirrored video saved as: $input_file"
 done
