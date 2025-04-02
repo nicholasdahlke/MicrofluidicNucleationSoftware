@@ -21,7 +21,7 @@ int main()
     std::string config_path = "/mnt/md0/Progammiersoftwareprojekte/CLionProjects/MicrofluidicNucleationSoftware/examples/analysis_config.cf";
     mfn::AnalysisConfig config(config_path);
 
-    std::filesystem::path mpemba_directory = "/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/05.03.25/";
+    std::filesystem::path mpemba_directory = "/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/22.03.25";
     std::queue<std::filesystem::path> case_queue;
     for (auto const& dir_entry: std::filesystem::directory_iterator(mpemba_directory))
     {

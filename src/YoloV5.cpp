@@ -8,6 +8,7 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/dnn.hpp>
 
+
 mfn::YoloV5::YoloV5(const mfn::AnalysisConfig &config)
 {
     open(config);
@@ -24,8 +25,9 @@ void mfn::YoloV5::open(const mfn::AnalysisConfig &config)
     net_input_size = cv::Size(640.0, 640.0);
     spdlog::get("mfn_logger")->info("Reading net file finished");
     YoloV5::config = config;
-    //yolo.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
-    //yolo.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
+    //yolo.setPreferableBackend(cv::dnn::DNN_BACKEND_CUDA);
+    //yolo.setPreferableTarget(cv::dnn::DNN_TARGET_CUDA);
+
 }
 
 /*std::vector<mfn::Detection> mfn::YoloV5::process(const cv::Mat &input)
@@ -59,6 +61,11 @@ std::vector<std::vector<mfn::Detection>> mfn::YoloV5::process(const std::vector<
         result.push_back(process(input));
     return result;
 */
+#ifdef REINITIALIZE_NET_ALWAYS
+    yolo = cv::dnn::readNet(config.net_file.string());
+    yolo.setPreferableBackend(cv::dnn::DNN_BACKEND_CUDA);
+    yolo.setPreferableTarget(cv::dnn::DNN_TARGET_CUDA);
+#endif
     if(yolo.empty())
         spdlog::get("mfn_logger")->error("Error during inference. Net empty");
     spdlog::get("mfn_logger")->info("Generating blob with {} images", inputs.size());
@@ -86,8 +93,13 @@ std::vector<std::vector<mfn::Detection>> mfn::YoloV5::process(const std::vector<
     spdlog::get("mfn_logger")->info("Starting inference");
     const std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
     std::vector<cv::Mat> outputs;
+
     yolo.setInput(blob);
     yolo.forward(outputs, yolo.getUnconnectedOutLayersNames());
+#ifdef REINITIALIZE_NET_ALWAYS
+    yolo = cv::dnn::Net();
+#endif
+
     const std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
     spdlog::get("mfn_logger")->info("Inference finished in {}ms, frame average is {}ms",
         std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count(),

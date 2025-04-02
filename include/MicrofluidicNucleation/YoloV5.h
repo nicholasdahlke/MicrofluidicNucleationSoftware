@@ -4,6 +4,7 @@
 
 #ifndef MICROFLUIDICNUCLEATIONSOFTWARE_YOLOV5_H
 #define MICROFLUIDICNUCLEATIONSOFTWARE_YOLOV5_H
+//#define REINITIALIZE_NET_ALWAYS
 #include <opencv2/dnn.hpp>
 #include <MicrofluidicNucleation/AnalysisConfig.h>
 #include <MicrofluidicNucleation/Detection.h>
@@ -25,6 +26,7 @@ namespace mfn
 
     private:
         cv::dnn::Net yolo;
+
         cv::Size net_input_size;
         mfn::AnalysisConfig config;
 

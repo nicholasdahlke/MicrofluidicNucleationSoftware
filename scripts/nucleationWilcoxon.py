@@ -3,8 +3,9 @@ import numpy as np
 import toml
 import os
 from scipy.optimize import curve_fit
+from scipy.stats import mannwhitneyu
 import itertools
-import matplotlib as mpl
+
 inputs = []
 inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/22.03.25/18- 700Ul Oel- 10Ul Wasser- 70 Warm- Rampe -22-5 - -24-5 In 10Min Kalt- 23-6 Raumtemp- 17-02 Messung Fertig- 47-81955 Framerate-03222025165618-0000-case.cf")
 inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/22.03.25/19- 700L Oel- 10Ul Wasser- 70 Warm- Rampe -22-5 - -24-5 In 10Min Kalt- 25-2 Raumtemp- 18-44 Messung Fertig- 47-81955 Framerate-03222025183855-0000-case.cf")
@@ -29,17 +30,11 @@ inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/07.03.
 inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/07.03.25/12-2- 700Ul Oel- 20Ul Wasser- 30 Warm- -23-5 Auf -24-5 In 10Min Kalt- 23-8 Raumtemp- 17-54 Messung Fertig- 47-81955 Framerate-03072025174949-0000-case.cf")
 inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/07.03.25/13- 700Ul Oel- 10Ul Wasser- 30 Warm- -23-5 Auf -24-5 In 10Min Kalt- 22-7 Raumtemp- 19-00 Messung Fertig- 47-81955 Framerate-03072025185057-0000-case.cf")
 
-temps = [70]*6 + [30]*10
+num_warm = 6
+num_cold = 9
+temps = [70]*num_warm + [30]*num_cold
 
-
-figsize = (14.06, 8.67)
-color_blue = "#5ca7c2"
-color_orange = "#ed8b00"
-data_array = []
-plt.rcParams["font.size"] = 35
-fig, ax = plt.subplots(layout="constrained")
-fig.set_size_inches(figsize)
-residuals = []
+param = []
 if __name__ == "__main__":
     colors = itertools.cycle(("tab:blue", "tab:orange", "tab:green", "tab:red", "tab:purple", "tab:brown", "tab:pink", "tab:gray", "tab:olive", "tab:cyan"))
     for file, temp in zip(inputs, temps):
@@ -51,40 +46,37 @@ if __name__ == "__main__":
 
         result_nucleation = np.loadtxt(file, delimiter=";")
         result_nucleation[:,0] += 273.15
-        data_array.append(result_nucleation.transpose())
 
-        color = color_blue
+        color = next(colors)
         marker = "o"
         if temp > 50:
-            color = color_orange
-        ax.scatter(result_nucleation[:, 0], result_nucleation[:, 1], color=color, marker=marker, s=200)
+            marker = "x"
+        #plt.scatter(result_nucleation[:, 0], result_nucleation[:, 1], color=color, marker=marker)
 
         fit_x = np.linspace(result_nucleation[:, 0].min(), result_nucleation[:, 0].max(), 50)
         try:
             fit = curve_fit(lambda x, p0, p1: p0  - (p1/x), result_nucleation[:,0], np.log(result_nucleation[:,1]))[0]
-            ax.plot(fit_x, np.exp(fit[0]) * np.exp(-fit[1]/fit_x), color=color)
-            #ax.plot(fit_x, np.exp(fit[0]) * np.exp(-((249.91005282*fit[0])-5648.3151459)/fit_x), color="black")
+            param.append((fit[0], fit[1]))
 
-            residuals.append(np.pow(np.sum(result_nucleation[:,1]-(np.exp(fit[0]) * np.exp(-fit[1]/result_nucleation[:, 0]))), 2))
         except:
             print("Could not fit data")
 
-
-    ax.plot([],[], "o", color=color_orange, label=r"$T_h = 70^\circ\text{C}$")
-    ax.plot([],[], "o", color=color_blue, label=r"$T_h = 30^\circ\text{C}$")
-    ax.plot([],[], "-", color="black", label=r"Fit")
-
-    ax.grid()
-    ax.set_ylim((1e8, 1e11))
-    #ax.set_xlim((249, 253.5))
-    ax.set_xticks([250, 251, 252])
-    ax.set_yscale("log")
-    ax.set_xlabel(r"$T_k \ [\text{K}]$")
-    ax.set_ylabel(r"$\dot{n}\ [\text{m}^3 \text{s}^{-1}]$")
-    #ax.legend()
-    ax.legend(bbox_to_anchor=(0., 1.05, 1., 0.102), loc="lower left", mode="expand", ncol=3, borderaxespad=0.)
-    plt.savefig("/home/nicholas/plot_curve.svg")
+    param = np.array(param)
+    fit_x = np.linspace(param[:, 0].min(), param[:, 0].max(), len(param))
+    fit_lin = curve_fit(lambda x, p0, p1: p0*x + p1, param[:,0], param[:,1])[0]
+    plt.scatter(param[:, 0], param[:, 1], c=temps)
+    plt.plot(fit_x, fit_lin[0]*fit_x + fit_lin[1])
+    plt.ylabel(r"$-\frac{\Delta G^*}{k_B}$")
+    plt.xlabel(r"$\ln\dot{N}_0$")
     plt.figure()
-    plt.scatter(temps, residuals)
-    plt.yscale("log")
-    plt.show()
+    plt.scatter(param[:, 0], param[:, 1] -(fit_lin[0]*param[:,0] + fit_lin[1]), c=temps)
+    #plt.yscale("log")
+    #plt.show()
+    # First samples are warm, second are cold
+    print("less " + str(mannwhitneyu(param[:num_warm, 0], param[num_warm:, 0], alternative="less", method="auto")))
+    print("greater " + str(mannwhitneyu(param[:num_warm, 0], param[num_warm:, 0], alternative="greater", method="auto")))
+    print("two-sided " + str(mannwhitneyu(param[:num_warm, 0], param[num_warm:, 0], alternative="two-sided", method="auto")))
+
+
+
+

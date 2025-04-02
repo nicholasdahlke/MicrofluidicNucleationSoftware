@@ -91,10 +91,10 @@ void mfn::NucleationCalculator::initFromFiles(
     {
         dropletResults.emplace_back(
             stod(droplet[0]),
-            droplet[1] == "1",
+            std::stoi(droplet[1]),
             stod(droplet[2]),
             stod(droplet[3]),
-            droplet[4] == "1"
+            std::stoi(droplet[4])
             );
     }
 }

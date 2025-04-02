@@ -52,7 +52,7 @@ std::regex mfn::TemperatureReader::getValidLineRegex(std::vector<std::string> co
             regex += "|";
     }
 
-    regex += ");(-?\\d+)?;(-?\\d+)?\\s*(#.*)?$";
+    regex += ");(-?\\d+.?\\d*)?;(-?\\d+.?\\d*)?\\s*(#.*)?$";
 
     return std::regex(regex);
 }
@@ -61,7 +61,7 @@ double mfn::TemperatureReader::getTemperature(const double time_ms) const
 {
     int command_time = 0;
     double current_temp = 0;
-    for (command current_command : commands)
+    for (const command& current_command : commands)
     {
         if ((time_ms >= command_time && time_ms <= command_time + current_command.value2) || current_command.value2 == 0.0)
         {
