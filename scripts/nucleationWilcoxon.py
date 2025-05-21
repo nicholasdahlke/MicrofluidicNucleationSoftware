@@ -64,14 +64,7 @@ if __name__ == "__main__":
     param = np.array(param)
     fit_x = np.linspace(param[:, 0].min(), param[:, 0].max(), len(param))
     fit_lin = curve_fit(lambda x, p0, p1: p0*x + p1, param[:,0], param[:,1])[0]
-    plt.scatter(param[:, 0], param[:, 1], c=temps)
-    plt.plot(fit_x, fit_lin[0]*fit_x + fit_lin[1])
-    plt.ylabel(r"$-\frac{\Delta G^*}{k_B}$")
-    plt.xlabel(r"$\ln\dot{N}_0$")
-    plt.figure()
-    plt.scatter(param[:, 0], param[:, 1] -(fit_lin[0]*param[:,0] + fit_lin[1]), c=temps)
-    #plt.yscale("log")
-    #plt.show()
+
     # First samples are warm, second are cold
     print("less " + str(mannwhitneyu(param[:num_warm, 0], param[num_warm:, 0], alternative="less", method="auto")))
     print("greater " + str(mannwhitneyu(param[:num_warm, 0], param[num_warm:, 0], alternative="greater", method="auto")))

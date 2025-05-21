@@ -3,6 +3,7 @@ import numpy as np
 import toml
 import os
 from scipy.optimize import curve_fit
+from scipy.stats import linregress
 import itertools
 import matplotlib as mpl
 inputs = []
@@ -31,17 +32,25 @@ inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/07.03.
 
 temps = [70]*6 + [30]*10
 
+plt.rcParams.update({
+    "font.family": "serif",
+    "text.usetex": True,
+    "pgf.rcfonts": False,
+    "font.size": 11,
+    "text.latex.preamble": r"\usepackage{amsmath} \usepackage{amssymb} \usepackage{siunitx}",
+})
 
-figsize = (14.06, 8.67)
-color_blue = "#5ca7c2"
+
+figsize = (6.3, 3.5)
+color_blue = "tab:blue"
 color_orange = "#ed8b00"
+
 data_array = []
-plt.rcParams["font.size"] = 35
 fig, ax = plt.subplots(layout="constrained")
 fig.set_size_inches(figsize)
 residuals = []
 if __name__ == "__main__":
-    colors = itertools.cycle(("tab:blue", "tab:orange", "tab:green", "tab:red", "tab:purple", "tab:brown", "tab:pink", "tab:gray", "tab:olive", "tab:cyan"))
+    markers = itertools.cycle(("o", "v", "^", "<", ">", "1", "s", "+", "x", "d", "h", "p", "*", "X", "P", "8"))
     for file, temp in zip(inputs, temps):
         with open(file) as f:
             data = toml.loads(f.read())
@@ -54,36 +63,37 @@ if __name__ == "__main__":
         data_array.append(result_nucleation.transpose())
 
         color = color_blue
-        marker = "o"
+        marker = next(markers)
         if temp > 50:
             color = color_orange
-        ax.scatter(result_nucleation[:, 0], result_nucleation[:, 1], color=color, marker=marker, s=200)
+        ax.scatter(result_nucleation[:, 0] - 273.15, result_nucleation[:, 1], color=color, marker=marker, s=15)
 
         fit_x = np.linspace(result_nucleation[:, 0].min(), result_nucleation[:, 0].max(), 50)
-        try:
-            fit = curve_fit(lambda x, p0, p1: p0  - (p1/x), result_nucleation[:,0], np.log(result_nucleation[:,1]))[0]
-            ax.plot(fit_x, np.exp(fit[0]) * np.exp(-fit[1]/fit_x), color=color)
-            #ax.plot(fit_x, np.exp(fit[0]) * np.exp(-((249.91005282*fit[0])-5648.3151459)/fit_x), color="black")
-
-            residuals.append(np.pow(np.sum(result_nucleation[:,1]-(np.exp(fit[0]) * np.exp(-fit[1]/result_nucleation[:, 0]))), 2))
-        except:
-            print("Could not fit data")
+        #try:
+        fit = curve_fit(lambda x, p0, p1: p0  - (p1/x), result_nucleation[:,0], np.log(result_nucleation[:,1]))[0]
+        result_linregress = linregress(1/result_nucleation[:,0], np.log(result_nucleation[:,1]))
+        ax.plot(fit_x - 273.15, np.exp(fit[0]) * np.exp(-fit[1]/fit_x), color=color, lw=1)
+        #ax.fill_between(fit_x, np.exp(fit[0]) * np.exp(-fit[1]/fit_x) + error_intercep, np.exp(fit[0]) * np.exp(-fit[1]/fit_x) - error_slope, alpha=.2, color=color)
+        residuals.append(np.pow(np.sum(result_nucleation[:,1]-(np.exp(fit[0]) * np.exp(-fit[1]/result_nucleation[:, 0]))), 2))
+        #except ValueError:
+        #    print("Could not fit data")
 
 
     ax.plot([],[], "o", color=color_orange, label=r"$T_h = 70^\circ\text{C}$")
     ax.plot([],[], "o", color=color_blue, label=r"$T_h = 30^\circ\text{C}$")
     ax.plot([],[], "-", color="black", label=r"Fit")
 
-    ax.grid()
+    #ax.grid()
     ax.set_ylim((1e8, 1e11))
     #ax.set_xlim((249, 253.5))
-    ax.set_xticks([250, 251, 252])
+    #ax.set_xticks([250, 251, 252])
     ax.set_yscale("log")
-    ax.set_xlabel(r"$T_k \ [\text{K}]$")
+    ax.set_xlabel(r"$T_k$  [°C]")
     ax.set_ylabel(r"$\dot{n}\ [\text{m}^3 \text{s}^{-1}]$")
     #ax.legend()
     ax.legend(bbox_to_anchor=(0., 1.05, 1., 0.102), loc="lower left", mode="expand", ncol=3, borderaxespad=0.)
-    plt.savefig("/home/nicholas/plot_curve.svg")
+    plt.savefig("/home/nicholas/plot_nucleaten.pdf")
+
     plt.figure()
     plt.scatter(temps, residuals)
     plt.yscale("log")

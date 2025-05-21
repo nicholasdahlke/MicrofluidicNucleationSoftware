@@ -5,6 +5,7 @@ import os
 from scipy.optimize import curve_fit
 import itertools
 import matplotlib as mpl
+from scipy.stats import linregress
 inputs = []
 inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/22.03.25/18- 700Ul Oel- 10Ul Wasser- 70 Warm- Rampe -22-5 - -24-5 In 10Min Kalt- 23-6 Raumtemp- 17-02 Messung Fertig- 47-81955 Framerate-03222025165618-0000-case.cf")
 inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/22.03.25/19- 700L Oel- 10Ul Wasser- 70 Warm- Rampe -22-5 - -24-5 In 10Min Kalt- 25-2 Raumtemp- 18-44 Messung Fertig- 47-81955 Framerate-03222025183855-0000-case.cf")
@@ -33,17 +34,26 @@ num_cold = 10
 temps = [70]*num_warm + [30]*num_cold
 
 
-color_blue = "#5ca7c2"
+plt.rcParams.update({
+    "font.family": "serif",
+    "text.usetex": True,
+    "pgf.rcfonts": False,
+    "font.size": 11,
+    "text.latex.preamble": r"\usepackage{amsmath} \usepackage{amssymb} \usepackage{siunitx}",
+})
+figsize = (3.08102, 2.3)
+color_blue = "tab:blue"
 color_orange = "#ed8b00"
+
+
 param = []
-figsize = (11.38, 8.67)
-plt.rcParams["font.size"] = 35
 fig, ax = plt.subplots(layout="constrained")
 fig.set_size_inches(figsize)
 
-
+error_n_dot = []
+error_delta_g = []
 if __name__ == "__main__":
-    colors = itertools.cycle(("tab:blue", "tab:orange", "tab:green", "tab:red", "tab:purple", "tab:brown", "tab:pink", "tab:gray", "tab:olive", "tab:cyan"))
+    markers = itertools.cycle((',', '+', '.', 'o', '*'))
     for file, temp in zip(inputs, temps):
         with open(file) as f:
             data = toml.loads(f.read())
@@ -55,36 +65,51 @@ if __name__ == "__main__":
         result_nucleation[:,0] += 273.15
 
         color = color_blue
-        marker = "o"
+        marker = next(markers)
         if temp > 50:
             color = color_orange
         try:
             fit = curve_fit(lambda x, p0, p1: p0  - (p1/x), result_nucleation[:,0], np.log(result_nucleation[:,1]))[0]
             param.append((fit[0], fit[1]))
+            result_linregress = linregress(1/result_nucleation[:,0], np.log(result_nucleation[:,1]))
+            error_n_dot.append(result_linregress.intercept_stderr)
+            error_delta_g.append(result_linregress.stderr)
+
 
         except:
             print("Could not fit data")
 
     param = np.array(param)
+    error_n_dot = np.array(error_n_dot)
+    error_delta_g = np.array(error_delta_g)
     fit_x = np.linspace(param[:, 0].min(), param[:, 0].max(), len(param))
     fit_lin = curve_fit(lambda x, p0, p1: p0*x + p1, param[:,0], param[:,1])[0]
     ax.plot(fit_x, fit_lin[0]*fit_x + fit_lin[1], linewidth=1, color="black", label="Fit", zorder=1)
-    ax.scatter(param[:num_warm, 0], param[:num_warm, 1], c=color_orange,label=r"$T_h = 70^\circ\text{C}$", zorder=2, s=200)
-    ax.scatter(param[num_warm:, 0], param[num_warm:, 1], c=color_blue, label=r"$T_h = 30^\circ\text{C}$", zorder=2, s=200)
-    ax.grid()
+    ax.scatter(param[:num_warm, 0], param[:num_warm, 1], c=color_orange,label=r"$T_h = 70^\circ\text{C}$", zorder=2, s=15)
+    ax.scatter(param[num_warm:, 0], param[num_warm:, 1], c=color_blue, label=r"$T_h = 30^\circ\text{C}$", zorder=2, s=15)
+    #ax.errorbar(param[:num_warm, 0], param[:num_warm, 1], xerr=error_n_dot[:num_warm]/2, yerr=error_delta_g[:num_warm]/2, fmt='', linestyle='', marker='o', capsize=5, markersize=4,c=color_orange,label=r"$T_h = 70^\circ\text{C}$", zorder=2)
+    #ax.errorbar(param[num_warm:, 0], param[num_warm:, 1], xerr=error_n_dot[num_warm:]/2, yerr=error_delta_g[num_warm:]/2, fmt='', linestyle='', marker='o', capsize=5, markersize=4,c=color_blue,label=r"$T_h = 30^\circ\text{C}$", zorder=2)
+
+    #ax.grid()
     ax.set_ylabel(r"$\Delta G^*_r k_B^{-1}$ [K]")
     ax.set_ylim((-1.4e5,-0.2e5))
     ax.set_xlim((-530, -50))
     ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
     ax.set_xlabel(r"$\ln\dot{n}_0\ [\text{m}^3 \text{s}^{-1}]$")
     #ax.legend(loc="lower right")
-    ax.legend(bbox_to_anchor=(0., 1.1, 1., 0.102), loc="lower left", mode="expand", ncol=3, borderaxespad=0.)
-    plt.savefig("/home/nicholas/plot_scatter_new.svg")
-    plt.figure()
-    mpl.rcParams.update(mpl.rcParamsDefault)
-    plt.scatter(param[:num_warm, 0], param[:num_warm, 1] -(fit_lin[0]*param[:num_warm,0] + fit_lin[1]), c=color_orange)
-    plt.scatter(param[num_warm:, 0], param[num_warm:, 1] -(fit_lin[0]*param[num_warm:,0] + fit_lin[1]), c=color_blue)
+    ax.legend(bbox_to_anchor=(0., 1.2, 1., 0.102), loc="lower left", mode="expand", ncol=2, borderaxespad=0.)
+    plt.savefig("/home/nicholas/plot_scatter_new.pdf")
+    plt.figure(figsize=(11.6, 8.26))
+    plt.rcParams["font.size"] = 11
+    #plt.ylim((-210, 210))
+    plt.title("Residuen")
+    plt.scatter(param[:num_warm, 0], (param[:num_warm, 1] -(fit_lin[0]*param[:num_warm,0] + fit_lin[1]))/(fit_lin[0]*param[:num_warm,0] + fit_lin[1]), c=color_orange)
+    plt.scatter(param[num_warm:, 0], (param[num_warm:, 1] -(fit_lin[0]*param[num_warm:,0] + fit_lin[1]))/(fit_lin[0]*param[num_warm:,0] + fit_lin[1]), c=color_blue)
+    print(np.max(np.abs((param[:num_warm, 1] -(fit_lin[0]*param[:num_warm,0] + fit_lin[1]))/(fit_lin[0]*param[:num_warm,0] + fit_lin[1]))))
+    print(np.max(np.abs((param[num_warm:, 1] -(fit_lin[0]*param[num_warm:,0] + fit_lin[1]))/(fit_lin[0]*param[num_warm:,0] + fit_lin[1]))))
     plt.axhline(y=0, color="grey", linestyle="dashed")
-
+    plt.ylabel(r"$\Delta(\Delta G^*_r k_B^{-1})$ [K]")
+    plt.xlabel(r"$\ln\dot{n}_0\ [\text{m}^3 \text{s}^{-1}]$")
     #plt.yscale("log")
+
     plt.show()
