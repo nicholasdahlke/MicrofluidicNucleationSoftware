@@ -1,10 +1,15 @@
+from time import process_time_ns
+from unittest import result
+
+from matplotlib.patches import Ellipse
 import matplotlib.pyplot as plt
 import numpy as np
 import toml
 import os
 from scipy.optimize import curve_fit
-from scipy.stats import mannwhitneyu
+from scipy.stats import mannwhitneyu, hmean
 import itertools
+from sklearn.decomposition import PCA
 
 inputs = []
 inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/22.03.25/18- 700Ul Oel- 10Ul Wasser- 70 Warm- Rampe -22-5 - -24-5 In 10Min Kalt- 23-6 Raumtemp- 17-02 Messung Fertig- 47-81955 Framerate-03222025165618-0000-case.cf")
@@ -31,10 +36,23 @@ inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/07.03.
 inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/07.03.25/13- 700Ul Oel- 10Ul Wasser- 30 Warm- -23-5 Auf -24-5 In 10Min Kalt- 22-7 Raumtemp- 19-00 Messung Fertig- 47-81955 Framerate-03072025185057-0000-case.cf")
 
 num_warm = 6
-num_cold = 9
+num_cold = 10
 temps = [70]*num_warm + [30]*num_cold
-
+k_b = 1.380649e-23
+used_temps = None
 param = []
+
+def compute_confidence_ellipse(t, n_dot):
+    t_hm = hmean(t)
+    sigma_squared = np.var(1/t)
+    rho_squared = (1/t_hm**2)/(1/t_hm**2 + sigma_squared)
+    n = t.size
+    lambda_1 = (1/n)*(rho_squared/(1-rho_squared))*(t_hm**2 + 1)
+    lambda_2 = 1/n
+    angle = np.arctan(1/(k_b*t_hm))
+    return lambda_1, lambda_2, angle
+
+ellipses = []
 if __name__ == "__main__":
     colors = itertools.cycle(("tab:blue", "tab:orange", "tab:green", "tab:red", "tab:purple", "tab:brown", "tab:pink", "tab:gray", "tab:olive", "tab:cyan"))
     for file, temp in zip(inputs, temps):
@@ -46,30 +64,80 @@ if __name__ == "__main__":
 
         result_nucleation = np.loadtxt(file, delimiter=";")
         result_nucleation[:,0] += 273.15
-
+        ellipses.append(compute_confidence_ellipse(result_nucleation[:,0], result_nucleation[:,1]))
         color = next(colors)
         marker = "o"
         if temp > 50:
             marker = "x"
-        #plt.scatter(result_nucleation[:, 0], result_nucleation[:, 1], color=color, marker=marker)
-
+        #fig, ax = plt.subplots()
+        #ax.scatter(result_nucleation[:, 0], result_nucleation[:, 1], color=color, marker=marker)
         fit_x = np.linspace(result_nucleation[:, 0].min(), result_nucleation[:, 0].max(), 50)
-        try:
-            fit = curve_fit(lambda x, p0, p1: p0  - (p1/x), result_nucleation[:,0], np.log(result_nucleation[:,1]))[0]
-            param.append((fit[0], fit[1]))
 
-        except:
-            print("Could not fit data")
+        lin_fit_func = lambda x, p0, p1: p0  - (p1/x)
+        linear_fit = curve_fit(lin_fit_func, result_nucleation[:,0], np.log(result_nucleation[:,1]))[0]
+        #nonlinear_fit_func = lambda x, p0, p1: p0 * np.exp(-p1/x)
+        #nonlinear_fit = curve_fit(nonlinear_fit_func, result_nucleation[:,0], result_nucleation[:,1], p0=(np.exp(linear_fit[0]), linear_fit[1]), maxfev=10000000)[0]
+        #param.append((linear_fit[0], linear_fit[1], nonlinear_fit[0], nonlinear_fit[1]))
+        param.append((linear_fit[0], linear_fit[1]))
+        if used_temps is None:
+            used_temps = result_nucleation[:,0]
+        else:
+            used_temps = np.concatenate((used_temps, result_nucleation[:,0]))
+        #ax.plot(fit_x, np.exp(linear_fit[0])*np.exp(-linear_fit[1]/fit_x), label="Linear")
+        #plt.plot(fit_x, nonlinear_fit[0]*np.exp(-nonlinear_fit[1]/fit_x), label="Nonlinear")
+        #ax.legend()
 
     param = np.array(param)
+
+    #param[:, 2] = np.log(param[:,2])
+
     fit_x = np.linspace(param[:, 0].min(), param[:, 0].max(), len(param))
     fit_lin = curve_fit(lambda x, p0, p1: p0*x + p1, param[:,0], param[:,1])[0]
 
-    # First samples are warm, second are cold
-    print("less " + str(mannwhitneyu(param[:num_warm, 0], param[num_warm:, 0], alternative="less", method="auto")))
-    print("greater " + str(mannwhitneyu(param[:num_warm, 0], param[num_warm:, 0], alternative="greater", method="auto")))
-    print("two-sided " + str(mannwhitneyu(param[:num_warm, 0], param[num_warm:, 0], alternative="two-sided", method="auto")))
+    param_cov = np.cov(np.transpose(param[:, 0:2]))
+    eigenvalues, eigenvectors = np.linalg.eig(param_cov)
+    print("Eigenvalues", eigenvalues)
+    print("Eigenvectors", eigenvectors)
+    print(param_cov)
+
+    t_hm = hmean(used_temps)
+    fig, ax = plt.subplots()
+    ax.set_title("Constable plot")
+
+    for point, ellipse in zip(param, ellipses):
+        el = Ellipse(xy=(point[0], point[1]*k_b), height=np.log(ellipse[0]), width=ellipse[1], angle=np.rad2deg(ellipse[2]), linewidth=2, fill=False)
+        ax.add_patch(el)
+
+    ax.scatter(param[:num_warm, 0], param[:num_warm, 1]*k_b, c="tab:orange", label="Warm", marker="x")
+    ax.scatter(param[num_warm:, 0], param[num_warm:, 1]*k_b, c="tab:blue", label="cold", marker="x")
+    #plt.scatter(param[:num_warm, 2], param[:num_warm, 3]*k_b, c="tab:orange", label="Warm", marker="o")
+    #plt.scatter(param[num_warm:, 2], param[num_warm:, 3]*k_b, c="tab:blue", label="cold", marker="o")
+    ax.plot(fit_x, (fit_lin[0]*fit_x + fit_lin[1])*k_b, label="Linear fit")
+    print("Gradient", fit_lin[0]*k_b)
+    print("Grad the", 1/(k_b*t_hm))
+    ax.set_xlabel(r"$\Delta G$")
+    ax.set_ylabel(r"$\ln \dot{n}_0$")
+
+    ax.legend()
+    plt.show()
+
+    # Mann-Whitney on raw p0 parameter
+    #print("=== Mann-Whitney on raw p0 ===")
+    #print("less      " + str(mannwhitneyu(param[:num_warm, 0], param[num_warm:, 0], alternative="less",       method="auto")))
+    #print("greater   " + str(mannwhitneyu(param[:num_warm, 0], param[num_warm:, 0], alternative="greater",    method="auto")))
+    #print("two-sided " + str(mannwhitneyu(param[:num_warm, 0], param[num_warm:, 0], alternative="two-sided",  method="auto")))
+
+    # PCA reduction to 1D
+    pca_linear = PCA(n_components=1)
+    reduced_linear = pca_linear.fit_transform(param[:, 0:2])   # shape (n_samples, 1)
 
 
+    print(f"Linear PC1 direction (p0, p1): {pca_linear.components_[0]}")
+
+    # Mann-Whitney on PCA scores
+    print("\n=== Mann-Whitney on PCA scores with linear fit ===")
+    #print("less      " + str(mannwhitneyu(reduced_linear[:num_warm], reduced_linear[num_warm:], alternative="less",       method="auto")))
+    print("greater   " + str(mannwhitneyu(reduced_linear[:num_warm], reduced_linear[num_warm:], alternative="greater",    method="auto")))
+    print("two-sided " + str(mannwhitneyu(reduced_linear[:num_warm], reduced_linear[num_warm:], alternative="two-sided",  method="auto")))
 
 

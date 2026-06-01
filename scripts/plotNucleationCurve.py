@@ -6,6 +6,10 @@ from scipy.optimize import curve_fit
 from scipy.stats import linregress
 import itertools
 import matplotlib as mpl
+
+
+
+
 inputs = []
 inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/22.03.25/18- 700Ul Oel- 10Ul Wasser- 70 Warm- Rampe -22-5 - -24-5 In 10Min Kalt- 23-6 Raumtemp- 17-02 Messung Fertig- 47-81955 Framerate-03222025165618-0000-case.cf")
 inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/22.03.25/19- 700L Oel- 10Ul Wasser- 70 Warm- Rampe -22-5 - -24-5 In 10Min Kalt- 25-2 Raumtemp- 18-44 Messung Fertig- 47-81955 Framerate-03222025183855-0000-case.cf")
@@ -36,15 +40,15 @@ plt.rcParams.update({
     "font.family": "serif",
     "text.usetex": True,
     "pgf.rcfonts": False,
-    "font.size": 11,
+    "font.size": 25,
     "text.latex.preamble": r"\usepackage{amsmath} \usepackage{amssymb} \usepackage{siunitx}",
 })
 
 
-figsize = (6.3, 3.5)
-color_blue = "tab:blue"
+figsize = (10, 6)
+color_blue = "#5ca7c2"
 color_orange = "#ed8b00"
-
+symbolsize = 60
 data_array = []
 fig, ax = plt.subplots(layout="constrained")
 fig.set_size_inches(figsize)
@@ -66,32 +70,32 @@ if __name__ == "__main__":
         marker = next(markers)
         if temp > 50:
             color = color_orange
-        ax.scatter(result_nucleation[:, 0] - 273.15, result_nucleation[:, 1], color=color, marker=marker, s=15)
+        ax.scatter(result_nucleation[:, 0] - 273.15, result_nucleation[:, 1], color=color, marker=marker, s=symbolsize)
 
         fit_x = np.linspace(result_nucleation[:, 0].min(), result_nucleation[:, 0].max(), 50)
         #try:
         fit = curve_fit(lambda x, p0, p1: p0  - (p1/x), result_nucleation[:,0], np.log(result_nucleation[:,1]))[0]
         result_linregress = linregress(1/result_nucleation[:,0], np.log(result_nucleation[:,1]))
-        ax.plot(fit_x - 273.15, np.exp(fit[0]) * np.exp(-fit[1]/fit_x), color=color, lw=1)
+        ax.plot(fit_x - 273.15, np.exp(fit[0]) * np.exp(-fit[1]/fit_x), color=color, lw=1.5)
         #ax.fill_between(fit_x, np.exp(fit[0]) * np.exp(-fit[1]/fit_x) + error_intercep, np.exp(fit[0]) * np.exp(-fit[1]/fit_x) - error_slope, alpha=.2, color=color)
         residuals.append(np.pow(np.sum(result_nucleation[:,1]-(np.exp(fit[0]) * np.exp(-fit[1]/result_nucleation[:, 0]))), 2))
         #except ValueError:
         #    print("Could not fit data")
 
 
-    ax.plot([],[], "o", color=color_orange, label=r"$T_h = 70^\circ\text{C}$")
-    ax.plot([],[], "o", color=color_blue, label=r"$T_h = 30^\circ\text{C}$")
-    ax.plot([],[], "-", color="black", label=r"Fit")
+    ax.scatter([], [], color=color_orange, label=r"$T_h = 70^\circ\text{C}$", s=symbolsize)
+    ax.scatter([], [], color=color_blue, label=r"$T_h = 30^\circ\text{C}$", s=symbolsize)
+    #ax.plot([],[], "-", color="black", label=r"Fit")
 
     #ax.grid()
     ax.set_ylim((1e8, 1e11))
     #ax.set_xlim((249, 253.5))
     #ax.set_xticks([250, 251, 252])
     ax.set_yscale("log")
-    ax.set_xlabel(r"$T_k$  [°C]")
-    ax.set_ylabel(r"$\dot{n}\ [\text{m}^3 \text{s}^{-1}]$")
-    #ax.legend()
-    ax.legend(bbox_to_anchor=(0., 1.05, 1., 0.102), loc="lower left", mode="expand", ncol=3, borderaxespad=0.)
+    ax.set_xlabel(r"$T_c$  [°C]")
+    ax.set_ylabel(r"$\dot{n}\ [\text{m}^{-3} \text{s}^{-1}]$")
+    ax.legend()
+    #ax.legend(bbox_to_anchor=(0., 1.05, 1., 0.102), loc="lower left", mode="expand", ncol=3, borderaxespad=0.)
     plt.savefig("/home/nicholas/plot_nucleaten.pdf")
 
     plt.figure()
