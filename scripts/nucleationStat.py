@@ -60,12 +60,26 @@ def givens_rotation(angle: float):
         angle (float): Rotation angle in radians
 
     Returns:
-        list: 2x2 rotation matrix [[cos(θ), sin(θ)], [-sin(θ), cos(θ)]]
+        list: 2x2 rotation matrix
     """
     return [[np.cos(angle), -np.sin(angle)], [np.sin(angle), np.cos(angle)]]
 
 
 def get_confidence_ellipse(temperature_: np.ndarray, nucleation_rate_: np.ndarray, confidence=0.95):
+    """
+    Computes a confidence ellipse for fit parameters in Gibbs energy-nucleation rate space.
+
+    Uses eigenvalue decomposition of the covariance matrix from linear regression fit,
+    then transforms and rotates the ellipse to physical parameter space.
+
+    Args:
+        temperature_ (np.ndarray): Absolute temperatures in Kelvin
+        nucleation_rate_ (np.ndarray): Nucleation rates
+        confidence (float): Confidence level (default 0.95 for 95%)
+
+    Returns:
+        np.ndarray: Ellipse points in (ΔG, ln(J_0)) parameter space
+    """
     # 1. Get physical shifts and the RAW, numerically stable covariance matrix
     x_shift, y_shift, raw_cov = get_linear_fit_parameters(temperature_, nucleation_rate_)
 
