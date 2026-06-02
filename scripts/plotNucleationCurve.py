@@ -1,104 +1,127 @@
-import matplotlib.pyplot as plt
+#!/usr/bin/env python3
+"""
+Plot nucleation rate curves with fits for multiple measurements.
+
+This script loads nucleation data from multiple experiments and plots them
+with fitted curves based on classical nucleation theory.
+"""
+
 import numpy as np
-import toml
-import os
-from scipy.optimize import curve_fit
-from scipy.stats import linregress
-import itertools
-import matplotlib as mpl
+import sys
+from pathlib import Path
+
+# Import configuration and analysis modules
+
+from analysis import get_linear_fit_parameters
+from config.constants import K_B, COLOR_ORANGE, COLOR_BLUE, DEFAULT_FIGSIZE, SYMBOL_SIZE
+from config.paths import get_result_file, get_output_dir, set_output_dir
+from analysis.data_loader import load_nucleation_results, load_overview_file
+from plotting.plotting_utils import (
+    setup_plot_style,
+    create_figure,
+    save_figure,
+    get_color,
+    get_marker_cycle,
+    FONT_CONFIG_STANDARD,
+)
 
 
+def main():
+    """Main function to generate nucleation curve plot."""
 
+    # Setup
+    setup_plot_style(FONT_CONFIG_STANDARD)
 
-inputs = []
-inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/22.03.25/18- 700Ul Oel- 10Ul Wasser- 70 Warm- Rampe -22-5 - -24-5 In 10Min Kalt- 23-6 Raumtemp- 17-02 Messung Fertig- 47-81955 Framerate-03222025165618-0000-case.cf")
-inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/22.03.25/19- 700L Oel- 10Ul Wasser- 70 Warm- Rampe -22-5 - -24-5 In 10Min Kalt- 25-2 Raumtemp- 18-44 Messung Fertig- 47-81955 Framerate-03222025183855-0000-case.cf")
-inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/22.03.25/20- 700Ul Oel- 10Ul Wasser- 70 Warm- Rampe -22 - -24 In 10Min Kalt- 26-9 Raumtemp- 20-08  Messung Fertig- 47-81955 Framerate-03222025195804-0000-case.cf")
-inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/21.03.25/15- 700Ul Oel- 10Ul Wasser- 70 Warm- Rampe -22 Auf -24 In 10Min- 24-5 Raumtemp- 20-59 Messung Fertig- 47-81955 Framerate-03212025205040-0000-case.cf")
-inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/21.03.25/16- 700Ul Oel- 10Ul Wasser- 70 Warm- Rampe -22 Auf -24 In 10Min- 24-6 Raumtemp- 21-51 Messung Fertig- 47-81955 Framerate-03212025214019-0000-case.cf")
-#zu kurz ->inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/23.03.25/21- 700Ul Oel- 10Ul Wasser- 70 Warm- Rampe -22 - -24 In 10Min Kalt- 26-2 Raumptemp- 17-16 Messung Fertig- 47-81955 Framerate-03232025171337-0000-case.cf")
-#zu kurz ->inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/23.03.25/22- 700Ul Oel- 10Ul Wasser- 70 Warm- Rampe -21-5 - -23-5 In 10Min Kalt- 26-7 Raumptemp- 18-07 Messung Fertig- 47-81955 Framerate-03232025180509-0000-case.cf")
-inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/23.03.25/23- 700Ul Oel- 10Ul Wasser- 70 Warm- Rampe -21-5 - -23-5 In 10Min Kalt-26-8 Raumptemp- 19-08 Messung Fertig- 47-81955 Framerate-03232025190102-0000-case.cf")
+    # Define overview file
+    overview_file = Path("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/file_overview.csv")
 
+    # Set output directory
+    set_output_dir("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/analysis_ouput")
 
-#inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/05.03.25/3- 700Ul Oel- 20Ul Wasser - 30 Warm- Ramp- -20 - -21 In 4 Min Danach Stable Auf -21- 22-8 Raumtemp-15-08 Messung Fertig- 47-81955 Framerate-03052025145632-0000_mirrored-case.cf")
-inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/05.03.25/6- 700Ul Oel- 20Ul Wasser - 30 Warm- Ramp- -22 - -24 In 10Min- 22-0 Raumtemp-18-36 Messung Fertig- 47-81955 Framerate-03052025182331-0000_mirrored-case.cf")
-inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/05.03.25/5-1- 700Ul Oel- 20Ul Wasser - 30 Warm- Ramp- -22 - -24 In 9Min- 22-6 Raumtemp- 17-37 Messung Fertig- 47-81955 Framerate-03052025172613-0000_mirrored-case.cf")
-inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/05.03.25/4- 700Ul Oel- 20Ul Wasser - 30 Warm- Ramp- -21 - -23 In 8Min- 23 Raumtemp- 16-06 Messung Fertig- 47-81955 Framerate-03052025155701-0000_mirrored-case.cf")
-inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/14.03.25/14- 700 Ul Oel- 10Ul Wasser- 30 Warm- Rampe -22 - -24 In 10Min Kalt- 20-7 Raumtemp- 16-13 Messung Fertig- 47-81955 Framerate-03142025160022-0000-case.cf")
-inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/06.03.25- mit Öl Glasspritze/7- 700Ul Oel- 20Ul Wasser- 30 Warm- Ramp- -22 - -24 In 10Min - 23-7 Raumtemp- 16-06 Messung Fertig- 47-81955 Framerate-03062025155328-0000-case.cf")
-inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/06.03.25- mit Öl Glasspritze/8- 700Ul Oel- 20Ul Wasser- 30 Warm- Ramp- -23 - -24 In 10Min - 23-3 Raumtemp- 16-59 Messung Fertig- 47-81955 Framerate-03062025164610-0000-case.cf")
-inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/06.03.25- mit Öl Glasspritze/9- 700Ul Oel- 20Ul Wasser- 30 Warm- Ramp- -23 - -24 In 10Min - 23-4 Raumtemp- 18-18 Messung Fertig- 47-81955 Framerate-03062025180650-0000-case.cf")
-#inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/06.03.25- mit Öl Glasspritze/10- 700Ul Oel- 20Ul Wasser- 30 Warm- Ramp- -22 - -23 In 10Min - 24-0 Raumtemp- 19-06 Messung Fertig- 47-81955 Framerate-03062025190030-0000-case.cf")
-inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/07.03.25/11- 700Ul Oel- 20Ul Wasser- 30 Warm- -23 Auf -24 In 10Min Kalt- 23-3 Raumtemp- 16-37 Messung Fertig- 47-81955 Framerate-03072025162548-0000-case.cf")
-inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/07.03.25/12-2- 700Ul Oel- 20Ul Wasser- 30 Warm- -23-5 Auf -24-5 In 10Min Kalt- 23-8 Raumtemp- 17-54 Messung Fertig- 47-81955 Framerate-03072025174949-0000-case.cf")
-inputs.append("/home/nicholas/Mpempa Videos/Messungen Jufo 2025 Temp Ramp/07.03.25/13- 700Ul Oel- 10Ul Wasser- 30 Warm- -23-5 Auf -24-5 In 10Min Kalt- 22-7 Raumtemp- 19-00 Messung Fertig- 47-81955 Framerate-03072025185057-0000-case.cf")
+    if not overview_file.exists():
+        print(f"Error: Overview file not found at {overview_file}")
+        print("Please create a file_overview.csv with measurement files and temperatures")
+        sys.exit(1)
 
-temps = [70]*6 + [30]*10
+    # Load data
+    try:
+        data = load_overview_file(overview_file)
+    except Exception as e:
+        print(f"Error loading overview file: {e}")
+        sys.exit(1)
 
-plt.rcParams.update({
-    "font.family": "serif",
-    "text.usetex": True,
-    "pgf.rcfonts": False,
-    "font.size": 25,
-    "text.latex.preamble": r"\usepackage{amsmath} \usepackage{amssymb} \usepackage{siunitx}",
-})
+    # Extract unique measurement IDs
+    measurement_ids = range(int(np.max(data[:, 2])) + 1)
 
+    # Compute fit parameters for each measurement
+    fit_parameters = []
+    for meas_id in measurement_ids:
+        subset = data[data[:, 2] == meas_id]
+        temperatures = subset[:, 0]
+        nucleation_rates = subset[:, 1]
+        measurement_temp = subset[0, 3]
 
-figsize = (10, 6)
-color_blue = "#5ca7c2"
-color_orange = "#ed8b00"
-symbolsize = 60
-data_array = []
-fig, ax = plt.subplots(layout="constrained")
-fig.set_size_inches(figsize)
-residuals = []
-if __name__ == "__main__":
-    markers = itertools.cycle(("o", "v", "^", "<", ">", "1", "s", "+", "x", "d", "h", "p", "*", "X", "P", "8"))
-    for file, temp in zip(inputs, temps):
-        with open(file) as f:
-            data = toml.loads(f.read())
-        file = file.replace("-case.cf", "-case-bin-results.csv", 1)
-        if not os.path.isfile(file):
-            raise FileNotFoundError("The provided file '{}' does not exist.".format(file))
+        try:
+            delta_g, ln_n0, _ = get_linear_fit_parameters(temperatures, nucleation_rates)
+            fit_parameters.append((delta_g, ln_n0, meas_id, measurement_temp))
+        except Exception as e:
+            print(f"Warning: Could not fit measurement {meas_id}: {e}")
 
-        result_nucleation = np.loadtxt(file, delimiter=";")
-        result_nucleation[:,0] += 273.15
-        data_array.append(result_nucleation.transpose())
+    fit_parameters = np.array(fit_parameters)
 
-        color = color_blue
+    # Create figure and markers for plotting
+    fig, ax = create_figure(DEFAULT_FIGSIZE)
+    markers = get_marker_cycle(len(data))
+
+    for id in measurement_ids:
+        subset = data[data[:, 2] == id]
+        subset[:, [0, 3]] = subset[:, [0, 3]] - 273.15
+        temperature = subset[0, 3]
+        # Select color based on temperature
+        color = get_color(temperature=temperature)
         marker = next(markers)
-        if temp > 50:
-            color = color_orange
-        ax.scatter(result_nucleation[:, 0] - 273.15, result_nucleation[:, 1], color=color, marker=marker, s=symbolsize)
 
-        fit_x = np.linspace(result_nucleation[:, 0].min(), result_nucleation[:, 0].max(), 50)
-        #try:
-        fit = curve_fit(lambda x, p0, p1: p0  - (p1/x), result_nucleation[:,0], np.log(result_nucleation[:,1]))[0]
-        result_linregress = linregress(1/result_nucleation[:,0], np.log(result_nucleation[:,1]))
-        ax.plot(fit_x - 273.15, np.exp(fit[0]) * np.exp(-fit[1]/fit_x), color=color, lw=1.5)
-        #ax.fill_between(fit_x, np.exp(fit[0]) * np.exp(-fit[1]/fit_x) + error_intercep, np.exp(fit[0]) * np.exp(-fit[1]/fit_x) - error_slope, alpha=.2, color=color)
-        residuals.append(np.pow(np.sum(result_nucleation[:,1]-(np.exp(fit[0]) * np.exp(-fit[1]/result_nucleation[:, 0]))), 2))
-        #except ValueError:
-        #    print("Could not fit data")
+        # Plot data points
+        ax.scatter(
+            subset[:, 0],
+            subset[:, 1],
+            color=color,
+            marker=marker,
+            s=SYMBOL_SIZE,
+        )
 
+        # Plot fit curves
+        fit_t = np.linspace(subset[:, 0].min(), subset[:, 0].max(), 100)
+        fit_n_dot = np.exp(fit_parameters[id][1])*np.exp(-fit_parameters[id][0]/(K_B*(fit_t+273.15)))
+        ax.plot(
+            fit_t,
+            fit_n_dot,
+            color=color,
+            linestyle="--",
+        )
 
-    ax.scatter([], [], color=color_orange, label=r"$T_h = 70^\circ\text{C}$", s=symbolsize)
-    ax.scatter([], [], color=color_blue, label=r"$T_h = 30^\circ\text{C}$", s=symbolsize)
-    #ax.plot([],[], "-", color="black", label=r"Fit")
+    # Configure plot appearance
+    ax.scatter([], [], color=COLOR_ORANGE, label=r"$T_h = 70^\circ\text{C}$", s=SYMBOL_SIZE)
+    ax.scatter([], [], color=COLOR_BLUE, label=r"$T_h = 30^\circ\text{C}$", s=SYMBOL_SIZE)
 
-    #ax.grid()
     ax.set_ylim((1e8, 1e11))
-    #ax.set_xlim((249, 253.5))
-    #ax.set_xticks([250, 251, 252])
     ax.set_yscale("log")
     ax.set_xlabel(r"$T_c$  [°C]")
     ax.set_ylabel(r"$\dot{n}\ [\text{m}^{-3} \text{s}^{-1}]$")
     ax.legend()
-    #ax.legend(bbox_to_anchor=(0., 1.05, 1., 0.102), loc="lower left", mode="expand", ncol=3, borderaxespad=0.)
-    plt.savefig("/home/nicholas/plot_nucleaten.pdf")
 
-    plt.figure()
-    plt.scatter(temps, residuals)
-    plt.yscale("log")
-    plt.show()
+    # Save figure
+    output_path = save_figure(fig, "nucleation_curve.pdf")
+    print(f"Plot saved to: {output_path}")
+
+    # Display plots
+    try:
+        import matplotlib.pyplot as plt
+        plt.show()
+    except:
+        pass
+
+
+if __name__ == "__main__":
+    main()
+

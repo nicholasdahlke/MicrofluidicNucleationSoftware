@@ -22,7 +22,7 @@ for input_file in "$@"; do
     filename=$(basename -- "$input_file")
     file="$folder/old_videos/$filename"
 
-    # Apply horizontal mirroring using ffmpeg
+    # Apply gamma correction using ffmpeg
     ffmpeg -i "$file" -vf eq=gamma=0.4 -c:a copy "$input_file"
 
     echo "Gamma corrected video saved as: $input_file"

@@ -1,0 +1,11 @@
+# Python dependencies for nucleation analysis scripts
+
+# Core scientific computing
+numpy>=1.21.0
+scipy>=1.7.0
+
+# Plotting and visualization
+matplotlib>=3.4.0
+
+# Machine learning / dimensionality reduction
+scikit-learn>=0.24.0
