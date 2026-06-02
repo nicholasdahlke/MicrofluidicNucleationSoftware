@@ -14,7 +14,6 @@ A comprehensive software suite for analyzing nucleation processes in microfluidi
 - **Thermal Simulation**: Models thermal behavior in microfluidic systems
 - **Statistical Analysis**: Includes Wilcoxon rank-sum tests to detect anomalous freezing effects
 - **Interactive GUI**: Qt5-based application for experiment configuration and data visualization
-- **Batch Processing**: Command-line tools for processing multiple experiments
 - **Comprehensive Visualization**: Python scripts for plotting nucleation curves and statistical results
 
 ## Table of Contents
